@@ -31,4 +31,14 @@ export class TripsController {
   remove(@Param('id') id: string) {
     return this.tripsService.remove(+id);
   }
+
+  @Post(':id/members')
+  addMember(@Param('id') id: string, @Body('userId') userId: number) {
+    return this.tripsService.addMember(+id, userId);
+  }
+
+  @Delete(':id/members/:userId')
+  removeMember(@Param('id') id: string, @Param('userId') userId: string) {
+    return this.tripsService.removeMember(+id, +userId);
+  }
 }

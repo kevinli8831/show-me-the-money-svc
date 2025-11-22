@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { CreateTripDto } from '../src/trips/dto/create-trip.dto';
@@ -16,6 +16,7 @@ describe('TripsController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
 
     // Create a user for the trip
@@ -54,6 +55,26 @@ describe('TripsController (e2e)', () => {
     expect(response.body.name).toBe(createTripDto.name);
     expect(response.body.creatorUserId).toBe(userId);
     createdTripId = response.body.id;
+  });
+
+  it('/trips (POST) - Should create trip_member for creator', async () => {
+    // Query the database to check if trip_member was created
+    // We'll use a direct database query via a GET endpoint we'll create
+    // For now, we'll verify by trying to add the same user again (should fail if already exists)
+    
+    // Try to add the creator again - this should work for now since we don't have duplicate check
+    // But we can verify the member exists by checking if we can remove them
+    const response = await request(app.getHttpServer())
+      .delete(`/trips/${createdTripId}/members/${userId}`)
+      .expect(200);
+
+    expect(response.body.message).toBe('Member removed successfully');
+
+    // Add them back for other tests
+    await request(app.getHttpServer())
+      .post(`/trips/${createdTripId}/members`)
+      .send({ userId })
+      .expect(201);
   });
 
   it('/trips (GET) - Get All Trips', async () => {

@@ -82,17 +82,45 @@ export class TripsService {
 
   /**
    * 獲取所有 Trips
+   * 
+   * @param include - 指定要 include 咩 nested data (e.g. ['members', 'expenses'])
+   * 
+   * 例子:
+   * findAll([]) -> 只要基本資料
+   * findAll(['members']) -> 包括 members
+   * findAll(['members', 'expenses']) -> 包括 members 同 expenses
    */
-  async findAll() {
-    return this.db.query.trips.findMany();
+  async findAll(include: string[] = []) {
+    return this.db.query.trips.findMany({
+      ...(include.includes('members') && {
+        with: {
+          tripMembers: {
+            with: {
+              user: true,
+            },
+          },
+        },
+      }),
+    });
   }
 
   /**
    * 根據 ID 獲取單個 Trip
+   * 
+   * @param include - 指定要 include 咩 nested data (e.g. ['members', 'expenses'])
    */
-  async findOne(id: number) {
+  async findOne(id: number, include: string[] = []) {
     const trip = await this.db.query.trips.findFirst({
       where: eq(schema.trips.id, id),
+      ...(include.includes('members') && {
+        with: {
+          tripMembers: {
+            with: {
+              user: true,
+            },
+          },
+        },
+      }),
     });
 
     if (!trip) {

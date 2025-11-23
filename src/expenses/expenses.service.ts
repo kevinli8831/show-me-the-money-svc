@@ -24,23 +24,119 @@ export class ExpensesService {
   ) {}
 
   /**
-   * 創建新 Expense
+   * 創建新 Expense（連同 payers 同 splits）
+   * 
+   * 流程：
+   * 1. Validate payers 同 splits 總和
+   * 2. Insert expense
+   * 3. Insert expense payers（如果有提供）
+   * 4. Insert expense splits（如果有提供）
    * 
    * 例子：
    * createExpenseDto = {
    *   tripId: 1,
    *   title: "晚餐",
-   *   amount: "300.50",
+   *   amount: "300.00",
    *   currency: "HKD",
    *   category: "食飯",
-   *   createdBy: 1
+   *   createdBy: 1,
+   *   payers: [
+   *     { userId: 1, amountPaid: "200.00" },
+   *     { userId: 2, amountPaid: "100.00" }
+   *   ],
+   *   splits: [
+   *     { userId: 1, shareAmount: "150.00", splitMethod: "custom" },
+   *     { userId: 2, shareAmount: "150.00", splitMethod: "custom" }
+   *   ]
    * }
    */
   async create(createExpenseDto: CreateExpenseDto) {
+    const { payers, splits, amount, ...expenseData } = createExpenseDto;
+    
+    // === Validation ===
+    
+    // 1. Validate payers 總和 = amount
+    if (payers && payers.length > 0) {
+      const payersTotal = payers.reduce((sum, payer) => {
+        return sum + parseFloat(payer.amountPaid);
+      }, 0);
+      
+      const expenseAmount = parseFloat(amount);
+      
+      // 用 toFixed(2) 避免 floating point precision 問題
+      if (payersTotal.toFixed(2) !== expenseAmount.toFixed(2)) {
+        throw new Error(
+          `Payers 總和 ($${payersTotal.toFixed(2)}) 唔等於 expense amount ($${expenseAmount.toFixed(2)})`
+        );
+      }
+    }
+    
+    // 2. Validate splits 總和 = amount 或 percentage = 1.0
+    if (splits && splits.length > 0) {
+      const expenseAmount = parseFloat(amount);
+      
+      // 檢查係用 shareAmount 定 percentage
+      const hasShareAmount = splits.some(s => s.shareAmount !== undefined);
+      const hasPercentage = splits.some(s => s.percentage !== undefined);
+      
+      if (hasShareAmount) {
+        // 用 shareAmount：總和應該 = amount
+        const splitsTotal = splits.reduce((sum, split) => {
+          return sum + (split.shareAmount ? parseFloat(split.shareAmount) : 0);
+        }, 0);
+        
+        if (splitsTotal.toFixed(2) !== expenseAmount.toFixed(2)) {
+          throw new Error(
+            `Splits 總和 ($${splitsTotal.toFixed(2)}) 唔等於 expense amount ($${expenseAmount.toFixed(2)})`
+          );
+        }
+      } else if (hasPercentage) {
+        // 用 percentage：總和應該 = 1.0
+        const percentageTotal = splits.reduce((sum, split) => {
+          return sum + (split.percentage ? parseFloat(split.percentage) : 0);
+        }, 0);
+        
+        if (percentageTotal.toFixed(4) !== '1.0000') {
+          throw new Error(
+            `Splits percentage 總和 (${percentageTotal.toFixed(4)}) 唔等於 1.0000`
+          );
+        }
+      }
+    }
+    
+    // === Insert Data ===
+    
+    // 1. Insert expense
     const [expense] = await this.db
       .insert(schema.expenses)
-      .values(createExpenseDto)
+      .values({ ...expenseData, amount })
       .returning();
+
+    // 2. Insert expense payers（如果有提供）
+    if (payers && payers.length > 0) {
+      await this.db.insert(schema.expensePayers).values(
+        payers.map(payer => ({
+          expenseId: expense.id,
+          userId: payer.userId,
+          amountPaid: payer.amountPaid,
+        }))
+      );
+    }
+
+    // 3. Insert expense splits（如果有提供）
+    if (splits && splits.length > 0) {
+      await this.db.insert(schema.expenseSplits).values(
+        splits.map(split => ({
+          expenseId: expense.id,
+          userId: split.userId,
+          shareAmount: split.shareAmount,
+          percentage: split.percentage,
+          splitMethod: split.splitMethod || 'equal',
+          note: split.note,
+        }))
+      );
+    }
+
     return expense;
   }
 

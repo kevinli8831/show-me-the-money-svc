@@ -1,9 +1,13 @@
+import { CreateExpensePayerDto } from "./create-expense-payer.dto";
+import { CreateExpenseSplitDto } from "./create-expense-split.dto";
+
 /**
  * CreateExpenseDto - 創建 Expense 嘅 Data Transfer Object
  * 
  * 用途：
  * - 定義 POST /expenses 嘅 request body 結構
  * - 記錄 trip 入面嘅消費
+ * - 同時 create expense payers 同 splits
  */
 export class CreateExpenseDto {
   /**
@@ -65,4 +69,32 @@ export class CreateExpenseDto {
    * 記錄邊個 user create 呢個 expense
    */
   createdBy: number;
+
+  /**
+   * Expense Payers（可選）
+   * 
+   * 記錄邊個付錢同付咗幾多
+   * 如果唔提供，預設係 createdBy 付晒所有錢
+   * 
+   * 例子：
+   * [
+   *   { userId: 1, amountPaid: "200.00" },
+   *   { userId: 2, amountPaid: "100.00" }
+   * ]
+   */
+  payers?: CreateExpensePayerDto[];
+
+  /**
+   * Expense Splits（可選）
+   * 
+   * 記錄點樣分帳
+   * 如果唔提供，預設係所有 trip members 平分
+   * 
+   * 例子：
+   * [
+   *   { userId: 1, shareAmount: "150.00", splitMethod: "custom" },
+   *   { userId: 2, shareAmount: "150.00", splitMethod: "custom" }
+   * ]
+   */
+  splits?: CreateExpenseSplitDto[];
 }

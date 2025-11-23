@@ -3,8 +3,28 @@ import { AppModule } from './app.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LoggingInterceptor } from './logging.interceptor';
 
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as net from 'net';
+
+/**
+ * Check if a port is available
+ */
+async function findAvailablePort(startPort: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.listen(startPort, () => {
+      server.close(() => resolve(startPort));
+    });
+    server.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(findAvailablePort(startPort + 1));
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
 
 /**
  * Bootstrap Function - 啟動 NestJS Application
@@ -12,13 +32,14 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
  * 主要設定：
  * 1. ValidationPipe: 自動驗證同轉換 DTO
  * 2. Swagger: API 文檔 UI
- * 3. Port: 從環境變數讀取，預設 5678
+ * 3. Port: 從環境變數讀取，預設 5678 (如果被佔用會自動 +1)
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // Use Winston as the global logger
-  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+  const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
+  app.useLogger(logger);
 
   /**
    * 啟用全局 ValidationPipe
@@ -54,6 +75,7 @@ async function bootstrap() {
     .setTitle('Show Me The Money API')
     .setDescription('The Show Me The Money API description')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   
   const document = SwaggerModule.createDocument(app, config);
@@ -72,11 +94,18 @@ async function bootstrap() {
    * 1. process.env.PORT (從 .env 檔案讀取)
    * 2. 5678 (預設值)
    * 
-   * 例如：
-   * - Development: .env.development 設定 PORT=5678
-   * - Production: .env.production 設定 PORT=3000
+   * 自動 Port Increment:
+   * 如果 Port 被佔用，會自動試下一個 (e.g. 3000 -> 3001)
    */
-  await app.listen(process.env.PORT ?? 5678);
+  const configPort = parseInt(process.env.PORT ?? '5678', 10);
+  const port = await findAvailablePort(configPort);
+
+  if (port !== configPort) {
+    logger.warn(`Port ${configPort} is in use, switching to ${port}`);
+  }
+
+  await app.listen(port);
+  logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 
 bootstrap();

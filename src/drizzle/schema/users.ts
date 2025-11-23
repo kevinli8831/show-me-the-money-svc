@@ -1,4 +1,4 @@
-import { pgTable, bigserial, varchar, text, timestamp, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, bigserial, varchar, text, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
 
 /**
  * Users Table Schema - 用戶資料表
@@ -6,6 +6,7 @@ import { pgTable, bigserial, varchar, text, timestamp, boolean } from 'drizzle-o
  * 用途：
  * - 儲存所有 user 嘅基本資料
  * - 用於 authentication 同 user profile
+ * - 支援 Virtual Members (虛擬成員)
  * 
  * 關聯：
  * - trips.creatorUserId -> users.id (一個 user 可以 create 多個 trips)
@@ -37,6 +38,8 @@ export const users = pgTable('users', {
    * 
    * varchar(255) = 最多 255 個字符
    * unique() = 唔可以重複，database 會 create unique index
+   * 
+   * Virtual User 可以無 email
    */
   email: varchar('email', { length: 255 }).unique(),
 
@@ -47,6 +50,26 @@ export const users = pgTable('users', {
    * unique() = 唔可以重複
    */
   phone: varchar('phone', { length: 20 }).unique(),
+
+  /**
+   * Auth Provider (google / apple / email)
+   * 
+   * Virtual User 無 provider
+   */
+  provider: varchar('provider', { length: 50 }),
+
+  /**
+   * Provider User ID (e.g. Google sub, Apple sub)
+   * 
+   * Virtual User 無 providerId
+   */
+  providerId: varchar('provider_id', { length: 255 }),
+
+  /**
+   * Refresh Token (Hashed)
+   * 用於長效登入
+   */
+  refreshToken: text('refresh_token'),
 
   /**
    * Avatar URL（可選）
@@ -67,6 +90,32 @@ export const users = pgTable('users', {
   isRegistered: boolean('is_registered').default(false),
 
   /**
+   * 係咪虛擬成員（預設 false）
+   * 
+   * Virtual Member = 未註冊嘅佔位成員
+   * - 只有 name，無 email/provider
+   * - 可以加入 trip 同 expenses
+   * - 當真人註冊時可以 "claim" 呢個虛擬成員
+   */
+  isVirtual: boolean('is_virtual').default(false),
+
+  /**
+   * 被邊個真實用戶認領（可選）
+   * 
+   * 當虛擬成員被真實用戶 claim 之後，呢個 field 會指向真實用戶嘅 ID
+   * 用於 audit trail
+   */
+  claimedBy: integer('claimed_by').references(() => users.id),
+
+  /**
+   * 邊個用戶創建呢個虛擬成員（可選）
+   * 
+   * 記錄邊個用戶創建咗呢個虛擬成員
+   * 只適用於 isVirtual = true 嘅 user
+   */
+  createdBy: integer('created_by').references(() => users.id),
+
+  /**
    * 創建時間（自動設定）
    * 
    * timestamp = PostgreSQL TIMESTAMP type
@@ -74,3 +123,17 @@ export const users = pgTable('users', {
    */
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+/**
+ * Users Relations - 定義 users table 同其他 tables 嘅關係
+ */
+import { relations } from 'drizzle-orm';
+import { tripMembers } from './trip_members';
+
+export const usersRelations = relations(users, ({ many }) => ({
+  /**
+   * 一個 user 可以係多個 trips 嘅 member
+   */
+  tripMembers: many(tripMembers),
+}));
+

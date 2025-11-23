@@ -67,3 +67,23 @@ export const trips = pgTable('trips', {
    */
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+/**
+ * Trips Relations - 定義 trips table 同其他 tables 嘅關係
+ * 
+ * 呢啲 relations 係比 Drizzle Query API 用嘅（例如 db.query.trips.findMany({ with: { ... } })）
+ * 唔係 database constraints，只係 TypeScript type 同 query builder 用
+ */
+import { relations } from 'drizzle-orm';
+import { tripMembers } from './trip_members';
+
+export const tripsRelations = relations(trips, ({ many }) => ({
+  /**
+   * 一個 trip 有多個 trip members
+   * 
+   * 用法：
+   * db.query.trips.findMany({ with: { tripMembers: true } })
+   */
+  tripMembers: many(tripMembers),
+}));
+

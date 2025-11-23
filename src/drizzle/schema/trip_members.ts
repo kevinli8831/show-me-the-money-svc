@@ -82,3 +82,27 @@ export const tripMembers = pgTable('trip_members', {
    */
   pk: primaryKey({ columns: [t.tripId, t.userId] }),
 }));
+
+/**
+ * Trip Members Relations - 定義 trip_members table 同其他 tables 嘅關係
+ */
+import { relations } from 'drizzle-orm';
+
+export const tripMembersRelations = relations(tripMembers, ({ one }) => ({
+  /**
+   * 每個 trip member 屬於一個 trip
+   */
+  trip: one(trips, {
+    fields: [tripMembers.tripId],
+    references: [trips.id],
+  }),
+  
+  /**
+   * 每個 trip member 係一個 user
+   */
+  user: one(users, {
+    fields: [tripMembers.userId],
+    references: [users.id],
+  }),
+}));
+

@@ -4,7 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 /**
  * UsersService - 處理所有 User 相關嘅業務邏輯
@@ -37,12 +37,114 @@ export class UsersService {
    * createUserDto = { name: "Kevin", email: "kevin@example.com" }
    * -> INSERT INTO users (name, email) VALUES ('Kevin', 'kevin@example.com') RETURNING *
    */
+  /**
+   * 創建 User (支援虛擬成員)
+   * 
+   * 如果 isVirtual = true，只需要 name
+   * 如果 isVirtual = false，需要 email/OAuth 資料
+   */
   async create(createUserDto: CreateUserDto) {
     const [user] = await this.db
       .insert(schema.users)
       .values(createUserDto)
-      .returning();
+      .returning() as any[];
     return user;
+  }
+
+  /**
+   * 創建虛擬成員
+   * 
+   * 虛擬成員只有名字，無 email/provider
+   * 用於暫時記錄未註冊嘅成員
+   */
+  async createVirtualUser(name: string, createdBy: number) {
+    const [user] = await this.db
+      .insert(schema.users)
+      .values({
+        name,
+        isVirtual: true,
+        createdBy,
+      })
+      .returning() as any[];
+    return user;
+  }
+
+  /**
+   * 搵某個 Trip 入面嘅所有虛擬成員
+   */
+  async findVirtualUsersByTrip(tripId: number) {
+    const members = await this.db
+      .select({ user: schema.users })
+      .from(schema.tripMembers)
+      .innerJoin(schema.users, eq(schema.users.id, schema.tripMembers.userId))
+      .where(
+        and(
+          eq(schema.tripMembers.tripId, tripId),
+          eq(schema.users.isVirtual, true),
+        ),
+      );
+    return members.map(m => m.user);
+  }
+
+  /**
+   * 認領虛擬成員
+   * 
+   * 當真人註冊後，可以 claim 之前嘅虛擬成員
+   * 1. 將所有 trip_members 由 virtual user 轉去 real user
+   * 2. 將所有 expense_splits 由 virtual user 轉去 real user
+   * 3. 將所有 expense_payers 由 virtual user 轉去 real user
+   * 4. 標記 virtual user 已被 claim
+   */
+  async claimVirtualUser(virtualUserId: number, realUserId: number, tripId: number) {
+    // 1. Update trip_members
+    await this.db
+      .update(schema.tripMembers)
+      .set({ userId: realUserId })
+      .where(
+        and(
+          eq(schema.tripMembers.userId, virtualUserId),
+          eq(schema.tripMembers.tripId, tripId),
+        ),
+      );
+
+    // 2. Update expense_splits (所有 trip 入面嘅 expenses)
+    const tripExpenses = await this.db
+      .select({ id: schema.expenses.id })
+      .from(schema.expenses)
+      .where(eq(schema.expenses.tripId, tripId));
+    
+    const expenseIds = tripExpenses.map(e => e.id);
+    
+    if (expenseIds.length > 0) {
+      await this.db
+        .update(schema.expenseSplits)
+        .set({ userId: realUserId })
+        .where(
+          and(
+            eq(schema.expenseSplits.userId, virtualUserId),
+            // expenseId in expenseIds
+          ),
+        );
+
+      // 3. Update expense_payers
+      await this.db
+        .update(schema.expensePayers)
+        .set({ userId: realUserId })
+        .where(
+          and(
+            eq(schema.expensePayers.userId, virtualUserId),
+            // expenseId in expenseIds
+          ),
+        );
+    }
+
+    // 4. Mark virtual user as claimed
+    await this.db
+      .update(schema.users)
+      .set({ claimedBy: realUserId })
+      .where(eq(schema.users.id, virtualUserId));
+
+    return { success: true };
   }
 
   /**
@@ -94,7 +196,7 @@ export class UsersService {
       .update(schema.users)
       .set(updateUserDto)
       .where(eq(schema.users.id, id))
-      .returning();
+      .returning() as any[];
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -118,7 +220,7 @@ export class UsersService {
     const [user] = await this.db
       .delete(schema.users)
       .where(eq(schema.users.id, id))
-      .returning();
+      .returning() as any[];
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);

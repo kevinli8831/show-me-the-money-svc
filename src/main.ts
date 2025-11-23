@@ -1,5 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LoggingInterceptor } from './logging.interceptor';
 
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -14,6 +16,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Use Winston as the global logger
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   /**
    * 啟用全局 ValidationPipe
@@ -28,6 +33,9 @@ async function bootstrap() {
    * - @Type() decorator 唔會生效
    */
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+  // Apply LoggingInterceptor globally
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   /**
    * Swagger 設定

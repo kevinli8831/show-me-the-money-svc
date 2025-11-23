@@ -7,6 +7,10 @@ import { UsersModule } from './users/users.module';
 import { TripsModule } from './trips/trips.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { PaymentsModule } from './payments/payments.module';
+import { WinstonModule } from 'nest-winston';
+import * as winston from 'winston';
+import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
+import 'winston-daily-rotate-file';
 
 /**
  * AppModule - NestJS 嘅根 Module
@@ -49,6 +53,60 @@ import { PaymentsModule } from './payments/payments.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
+    }),
+
+    /**
+     * WinstonModule - Logging System
+     * 
+     * 用途：
+     * - 取代 NestJS 預設 Logger
+     * - Output logs 去 Console (有色) 同 File (JSON format)
+     * 
+     * Transports:
+     * 1. Console: 開發時睇，有色，pretty print
+     * 2. File (logs/error.log): 只記 error，JSON format
+     * 3. File (logs/combined.log): 記所有野，JSON format
+     */
+    WinstonModule.forRoot({
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.ms(),
+            nestWinstonModuleUtilities.format.nestLike('ShowMeTheMoney', {
+              colors: true,
+              prettyPrint: true,
+            }),
+          ),
+        }),
+        // Error Logs - Daily Rotate
+        new winston.transports.DailyRotateFile({
+          dirname: 'logs',
+          filename: 'error-%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          zippedArchive: true,
+          maxSize: '20m',
+          maxFiles: '30d', // Keep error logs for 30 days
+          level: 'error',
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json(),
+          ),
+        }),
+        // Combined Logs - Daily Rotate
+        new winston.transports.DailyRotateFile({
+          dirname: 'logs',
+          filename: 'combined-%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          zippedArchive: true,
+          maxSize: '20m',
+          maxFiles: '14d', // Keep combined logs for 14 days
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json(),
+          ),
+        }),
+      ],
     }),
     
     /**

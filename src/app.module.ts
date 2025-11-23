@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { TripsModule } from './trips/trips.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ExpenseCategoriesModule } from './expense-categories/expense-categories.module';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
@@ -131,6 +132,7 @@ import 'winston-daily-rotate-file';
     UsersModule,
     TripsModule,
     ExpensesModule,
+    ExpenseCategoriesModule,
     PaymentsModule,
     HealthModule,
     AuthModule,

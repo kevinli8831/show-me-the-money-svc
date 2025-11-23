@@ -72,6 +72,19 @@ export const users = pgTable('users', {
   refreshToken: text('refresh_token'),
 
   /**
+   * 用戶類型（必填）
+   * 
+   * 支援以下類型：
+   * - 'virtual': 虛擬成員（只有名字，未註冊）
+   * - 'email': Email/Password 註冊用戶
+   * - 'google': Google OAuth 用戶
+   * - 'apple': Apple Sign In 用戶
+   * 
+   * 預設值：'email'
+   */
+  userType: varchar('user_type', { length: 20 }).notNull().default('email'),
+
+  /**
    * Avatar URL（可選）
    * 
    * text = 無長度限制嘅 text field
@@ -80,30 +93,11 @@ export const users = pgTable('users', {
   avatarUrl: text('avatar_url'),
 
   /**
-   * 係咪已註冊用戶（預設 false）
-   * 
-   * boolean = true/false
-   * default(false) = 新 user 預設係未註冊
-   * 
-   * 用途：區分已註冊用戶同臨時用戶（例如被邀請加入 trip 但未註冊）
-   */
-  isRegistered: boolean('is_registered').default(false),
-
-  /**
-   * 係咪虛擬成員（預設 false）
-   * 
-   * Virtual Member = 未註冊嘅佔位成員
-   * - 只有 name，無 email/provider
-   * - 可以加入 trip 同 expenses
-   * - 當真人註冊時可以 "claim" 呢個虛擬成員
-   */
-  isVirtual: boolean('is_virtual').default(false),
-
-  /**
    * 被邊個真實用戶認領（可選）
    * 
    * 當虛擬成員被真實用戶 claim 之後，呢個 field 會指向真實用戶嘅 ID
    * 用於 audit trail
+   * 只適用於 userType = 'virtual' 嘅 user
    */
   claimedBy: integer('claimed_by').references(() => users.id),
 
@@ -111,7 +105,7 @@ export const users = pgTable('users', {
    * 邊個用戶創建呢個虛擬成員（可選）
    * 
    * 記錄邊個用戶創建咗呢個虛擬成員
-   * 只適用於 isVirtual = true 嘅 user
+   * 只適用於 userType = 'virtual' 嘅 user
    */
   createdBy: integer('created_by').references(() => users.id),
 

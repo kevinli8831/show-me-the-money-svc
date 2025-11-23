@@ -8,6 +8,27 @@
       "when": 1763825681803,
       "tag": "0000_third_tag",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1763914831579,
+      "tag": "0001_reflective_hannibal_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763915809432,
+      "tag": "0002_small_vivisector",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1763917599602,
+      "tag": "0003_wooden_lilandra",
+      "breakpoints": true
     }
   ]
 }

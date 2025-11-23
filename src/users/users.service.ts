@@ -40,8 +40,8 @@ export class UsersService {
   /**
    * 創建 User (支援虛擬成員)
    * 
-   * 如果 isVirtual = true，只需要 name
-   * 如果 isVirtual = false，需要 email/OAuth 資料
+   * 如果 userType = 'virtual'，只需要 name
+   * 如果 userType = 'email'/'google'/'apple'，需要 email/OAuth 資料
    */
   async create(createUserDto: CreateUserDto) {
     const [user] = await this.db
@@ -62,7 +62,7 @@ export class UsersService {
       .insert(schema.users)
       .values({
         name,
-        isVirtual: true,
+        userType: 'virtual',
         createdBy,
       })
       .returning() as any[];
@@ -80,7 +80,7 @@ export class UsersService {
       .where(
         and(
           eq(schema.tripMembers.tripId, tripId),
-          eq(schema.users.isVirtual, true),
+          eq(schema.users.userType, 'virtual'),
         ),
       );
     return members.map(m => m.user);

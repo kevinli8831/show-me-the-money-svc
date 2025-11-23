@@ -98,14 +98,26 @@ async function bootstrap() {
    * 如果 Port 被佔用，會自動試下一個 (e.g. 3000 -> 3001)
    */
   const configPort = parseInt(process.env.PORT ?? '5678', 10);
-  const port = await findAvailablePort(configPort);
+  const port = configPort;
 
   if (port !== configPort) {
     logger.warn(`Port ${configPort} is in use, switching to ${port}`);
   }
 
   await app.listen(port);
-  logger.log(`Application is running on: ${await app.getUrl()}`);
+  
+  // 獲取當前環境
+  const env = process.env.NODE_ENV || 'development';
+  const baseUrl = await app.getUrl();
+  
+  // 顯示啟動資訊
+  logger.log('='.repeat(60));
+  logger.log(`🚀 Application is running!`);
+  logger.log('='.repeat(60));
+  logger.log(`📦 Environment: ${env}`);
+  logger.log(`🌐 Server URL: ${baseUrl}`);
+  logger.log(`📚 Swagger API Docs: ${baseUrl}/api`);
+  logger.log('='.repeat(60));
 }
 
 bootstrap();

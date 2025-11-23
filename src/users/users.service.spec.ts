@@ -48,7 +48,7 @@ describe('UsersService - Virtual Members', () => {
       const mockVirtualUser = {
         id: 100,
         name: 'Kevin',
-        isVirtual: true,
+        userType: 'virtual',
         createdBy: 1,
         email: null,
         provider: null,
@@ -62,7 +62,7 @@ describe('UsersService - Virtual Members', () => {
       expect(mockDb.insert).toHaveBeenCalled();
       expect(mockDb.values).toHaveBeenCalledWith({
         name: 'Kevin',
-        isVirtual: true,
+        userType: 'virtual',
         createdBy: 1,
       });
     });
@@ -71,8 +71,8 @@ describe('UsersService - Virtual Members', () => {
   describe('findVirtualUsersByTrip', () => {
     it('should find virtual users in a trip', async () => {
       const mockMembers = [
-        { user: { id: 100, name: 'Kevin', isVirtual: true } },
-        { user: { id: 101, name: 'Mary', isVirtual: true } },
+        { user: { id: 100, name: 'Kevin', userType: 'virtual' } },
+        { user: { id: 101, name: 'Mary', userType: 'virtual' } },
       ];
 
       mockDb.where.mockResolvedValueOnce(mockMembers);

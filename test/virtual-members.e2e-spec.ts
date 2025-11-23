@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 
@@ -16,6 +16,7 @@ describe('Virtual Members (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
   });
 
@@ -35,7 +36,7 @@ describe('Virtual Members (e2e)', () => {
 
       createdRealUserId = response.body.id;
       expect(response.body.name).toBe('Alice');
-      expect(response.body.isVirtual).toBeFalsy();
+      expect(response.body.userType).toBe('email');
     });
 
     it('should create a trip', async () => {
@@ -59,14 +60,14 @@ describe('Virtual Members (e2e)', () => {
         .post('/users')
         .send({
           name: 'Kevin',
-          isVirtual: true,
+          userType: 'virtual',
           createdBy: createdRealUserId,
         })
         .expect(201);
 
       createdVirtualUserId = response.body.id;
       expect(response.body.name).toBe('Kevin');
-      expect(response.body.isVirtual).toBe(true);
+      expect(response.body.userType).toBe('virtual');
       expect(response.body.email).toBeNull();
       expect(response.body.provider).toBeNull();
     });

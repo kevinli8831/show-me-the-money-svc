@@ -61,9 +61,10 @@ export class TripsController {
   @ApiOperation({ summary: '獲取所有 Trips', description: '支援 ?include=members 查詢參數' })
   @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members', example: 'members' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved trips' })
-  findAll(@Query('include') include?: string) {
+  async findAll(@Query('include') include?: string) {
     const includeOptions = include?.split(',') || [];
-    return this.tripsService.findAll(includeOptions);
+    const trips = await this.tripsService.findAll(includeOptions);
+    return trips.map(trip => this.mapTripResponse(trip));
   }
 
   /**
@@ -82,9 +83,10 @@ export class TripsController {
   @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members', example: 'members' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved trip' })
   @ApiResponse({ status: 404, description: 'Trip not found' })
-  findOne(@Param('id') id: string, @Query('include') include?: string) {
+  async findOne(@Param('id') id: string, @Query('include') include?: string) {
     const includeOptions = include?.split(',') || [];
-    return this.tripsService.findOne(+id, includeOptions);
+    const trip = await this.tripsService.findOne(+id, includeOptions);
+    return this.mapTripResponse(trip);
   }
 
   /**
@@ -160,5 +162,12 @@ export class TripsController {
       realUserId,
       +id,
     );
+  }
+  private mapTripResponse(trip: any) {
+    if (trip.tripMembers) {
+      trip.members = trip.tripMembers;
+      delete trip.tripMembers;
+    }
+    return trip;
   }
 }

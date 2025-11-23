@@ -51,7 +51,7 @@ export class TripsService {
     const [trip] = await this.db
       .insert(schema.trips)
       .values(tripData)
-      .returning();
+      .returning() as any[];
 
     // 自動將 creator 加入做 trip member (Admin)
     if (createTripDto.creatorUserId) {
@@ -152,7 +152,7 @@ export class TripsService {
       .update(schema.trips)
       .set(updateData)
       .where(eq(schema.trips.id, id))
-      .returning();
+      .returning() as any[];
 
     if (!trip) {
       throw new NotFoundException(`Trip with ID ${id} not found`);
@@ -171,7 +171,7 @@ export class TripsService {
     const [trip] = await this.db
       .delete(schema.trips)
       .where(eq(schema.trips.id, id))
-      .returning();
+      .returning() as any[];
 
     if (!trip) {
       throw new NotFoundException(`Trip with ID ${id} not found`);
@@ -222,7 +222,7 @@ export class TripsService {
           eq(schema.tripMembers.userId, userId),
         ),
       )
-      .returning();
+      .returning() as any[];
 
     if (result.length === 0) {
       throw new NotFoundException(

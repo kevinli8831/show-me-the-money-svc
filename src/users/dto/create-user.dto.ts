@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsOptional, IsPhoneNumber, IsBoolean, IsInt } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsPhoneNumber, IsInt, IsIn } from 'class-validator';
 
 /**
  * CreateUserDto - 創建 User 嘅 Data Transfer Object
@@ -8,8 +8,8 @@ import { IsString, IsEmail, IsOptional, IsPhoneNumber, IsBoolean, IsInt } from '
  * - 自動驗證 input data
  * 
  * 支援兩種模式：
- * 1. 真實用戶 (isVirtual = false): 需要 email
- * 2. 虛擬成員 (isVirtual = true): 只需要 name
+ * 1. 真實用戶 (userType = 'email'/'google'/'apple'): 需要 email
+ * 2. 虛擬成員 (userType = 'virtual'): 只需要 name
  */
 export class CreateUserDto {
   /**
@@ -43,19 +43,22 @@ export class CreateUserDto {
   phone?: string;
 
   /**
-   * 係咪虛擬成員（可選，預設 false）
+   * 用戶類型（可選，預設 'email'）
    * 
-   * true = 虛擬成員（只有名字，未註冊）
-   * false = 真實用戶（有 email/OAuth）
+   * 支援以下類型：
+   * - 'virtual': 虛擬成員（只有名字，未註冊）
+   * - 'email': Email/Password 註冊用戶
+   * - 'google': Google OAuth 用戶
+   * - 'apple': Apple Sign In 用戶
    */
-  @IsBoolean()
+  @IsIn(['virtual', 'email', 'google', 'apple'])
   @IsOptional()
-  isVirtual?: boolean;
+  userType?: 'virtual' | 'email' | 'google' | 'apple';
 
   /**
    * 邊個用戶創建呢個虛擬成員（可選）
    * 
-   * 只適用於 isVirtual = true
+   * 只適用於 userType = 'virtual'
    */
   @IsInt()
   @IsOptional()

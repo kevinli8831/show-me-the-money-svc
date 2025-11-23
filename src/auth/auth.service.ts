@@ -43,7 +43,7 @@ export class AuthService {
       provider: provider,
       providerId: profile.id,
       avatarUrl: profile.photos?.[0]?.value,
-      isRegistered: true,
+      userType: provider, // 'google' or 'apple'
     }).returning();
 
     return newUsers[0];

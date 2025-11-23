@@ -39,7 +39,7 @@ export class UsersController {
    * @Body() decorator 會自動將 JSON request body 轉做 CreateUserDto
    */
   @Post()
-  @ApiOperation({ summary: '創建 User', description: '支援創建真實用戶或虛擬成員 (isVirtual: true)' })
+  @ApiOperation({ summary: '創建 User', description: '支援創建真實用戶或虛擬成員 (userType: "virtual")' })
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })

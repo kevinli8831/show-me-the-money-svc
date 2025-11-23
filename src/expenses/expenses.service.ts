@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
@@ -55,9 +55,15 @@ export class ExpensesService {
    * 根據 ID 獲取單個 Expense
    */
   async findOne(id: number) {
-    return this.db.query.expenses.findFirst({
+    const expense = await this.db.query.expenses.findFirst({
       where: eq(schema.expenses.id, id),
     });
+
+    if (!expense) {
+      throw new NotFoundException(`Expense with ID ${id} not found`);
+    }
+
+    return expense;
   }
 
   /**
@@ -69,6 +75,11 @@ export class ExpensesService {
       .set(updateExpenseDto)
       .where(eq(schema.expenses.id, id))
       .returning();
+
+    if (!expense) {
+      throw new NotFoundException(`Expense with ID ${id} not found`);
+    }
+
     return expense;
   }
 
@@ -82,6 +93,11 @@ export class ExpensesService {
       .delete(schema.expenses)
       .where(eq(schema.expenses.id, id))
       .returning();
+
+    if (!expense) {
+      throw new NotFoundException(`Expense with ID ${id} not found`);
+    }
+
     return expense;
   }
 }

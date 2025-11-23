@@ -80,6 +80,12 @@ describe('PaymentsController (e2e)', () => {
     expect(response.body.id).toBe(createdPaymentId);
   });
 
+  it('/payments/:id (GET) - Get One Payment (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .get('/payments/999999')
+      .expect(404);
+  });
+
   it('/payments/:id (PATCH) - Update Payment', async () => {
     const response = await request(app.getHttpServer())
       .patch(`/payments/${createdPaymentId}`)
@@ -89,6 +95,13 @@ describe('PaymentsController (e2e)', () => {
     expect(response.body.amount).toBe('60.00');
   });
 
+  it('/payments/:id (PATCH) - Update Payment (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .patch('/payments/999999')
+      .send({ amount: '100.00' })
+      .expect(404);
+  });
+
   it('/payments/:id (DELETE) - Delete Payment', async () => {
     await request(app.getHttpServer())
       .delete(`/payments/${createdPaymentId}`)
@@ -96,8 +109,12 @@ describe('PaymentsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .get(`/payments/${createdPaymentId}`)
-      .then((res) => {
-        expect(res.body).toEqual({});
-      });
+      .expect(404);
+  });
+
+  it('/payments/:id (DELETE) - Delete Payment (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .delete('/payments/999999')
+      .expect(404);
   });
 });

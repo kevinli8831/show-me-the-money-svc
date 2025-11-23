@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
@@ -60,9 +60,15 @@ export class PaymentsService {
    * 根據 ID 獲取單個 Payment
    */
   async findOne(id: number) {
-    return this.db.query.payments.findFirst({
+    const payment = await this.db.query.payments.findFirst({
       where: eq(schema.payments.id, id),
     });
+
+    if (!payment) {
+      throw new NotFoundException(`Payment with ID ${id} not found`);
+    }
+
+    return payment;
   }
 
   /**
@@ -74,6 +80,11 @@ export class PaymentsService {
       .set(updatePaymentDto)
       .where(eq(schema.payments.id, id))
       .returning();
+
+    if (!payment) {
+      throw new NotFoundException(`Payment with ID ${id} not found`);
+    }
+
     return payment;
   }
 
@@ -85,6 +96,11 @@ export class PaymentsService {
       .delete(schema.payments)
       .where(eq(schema.payments.id, id))
       .returning();
+
+    if (!payment) {
+      throw new NotFoundException(`Payment with ID ${id} not found`);
+    }
+
     return payment;
   }
 }

@@ -94,6 +94,12 @@ describe('TripsController (e2e)', () => {
     expect(response.body.id).toBe(createdTripId);
   });
 
+  it('/trips/:id (GET) - Get One Trip (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .get('/trips/999999')
+      .expect(404);
+  });
+
   it('/trips/:id (PATCH) - Update Trip', async () => {
     const response = await request(app.getHttpServer())
       .patch(`/trips/${createdTripId}`)
@@ -103,6 +109,13 @@ describe('TripsController (e2e)', () => {
     expect(response.body.name).toBe('Updated Trip Name');
   });
 
+  it('/trips/:id (PATCH) - Update Trip (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .patch('/trips/999999')
+      .send({ name: 'Ghost' })
+      .expect(404);
+  });
+
   it('/trips/:id (DELETE) - Delete Trip', async () => {
     await request(app.getHttpServer())
       .delete(`/trips/${createdTripId}`)
@@ -110,8 +123,12 @@ describe('TripsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .get(`/trips/${createdTripId}`)
-      .then((res) => {
-        expect(res.body).toEqual({});
-      });
+      .expect(404);
+  });
+
+  it('/trips/:id (DELETE) - Delete Trip (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .delete('/trips/999999')
+      .expect(404);
   });
 });

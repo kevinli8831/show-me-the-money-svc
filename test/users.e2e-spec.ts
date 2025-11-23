@@ -57,6 +57,12 @@ describe('UsersController (e2e)', () => {
     expect(response.body.id).toBe(createdUserId);
   });
 
+  it('/users/:id (GET) - Get One User (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .get('/users/999999')
+      .expect(404);
+  });
+
   it('/users/:id (PATCH) - Update User', async () => {
     const updateUserDto: UpdateUserDto = {
       name: 'Updated Test User',
@@ -70,6 +76,13 @@ describe('UsersController (e2e)', () => {
     expect(response.body.name).toBe(updateUserDto.name);
   });
 
+  it('/users/:id (PATCH) - Update User (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .patch('/users/999999')
+      .send({ name: 'Ghost' })
+      .expect(404);
+  });
+
   it('/users/:id (DELETE) - Delete User', async () => {
     await request(app.getHttpServer())
       .delete(`/users/${createdUserId}`)
@@ -78,12 +91,12 @@ describe('UsersController (e2e)', () => {
     // Verify deletion
     await request(app.getHttpServer())
       .get(`/users/${createdUserId}`)
-      .expect(200) // My implementation returns undefined/null if not found, or maybe 200 with empty body? 
-      // Drizzle findFirst returns undefined if not found. NestJS controller returns it as is.
-      // If I want 404, I need to handle it in service/controller.
-      // For now, let's check if the body is empty or null
-      .then((res) => {
-        expect(res.body).toEqual({}); // NestJS default for undefined is empty string or json?
-      });
+      .expect(404);
+  });
+
+  it('/users/:id (DELETE) - Delete User (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .delete('/users/999999')
+      .expect(404);
   });
 });

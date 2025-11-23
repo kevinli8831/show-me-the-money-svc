@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
@@ -91,9 +91,15 @@ export class TripsService {
    * 根據 ID 獲取單個 Trip
    */
   async findOne(id: number) {
-    return this.db.query.trips.findFirst({
+    const trip = await this.db.query.trips.findFirst({
       where: eq(schema.trips.id, id),
     });
+
+    if (!trip) {
+      throw new NotFoundException(`Trip with ID ${id} not found`);
+    }
+
+    return trip;
   }
 
   /**
@@ -119,6 +125,11 @@ export class TripsService {
       .set(updateData)
       .where(eq(schema.trips.id, id))
       .returning();
+
+    if (!trip) {
+      throw new NotFoundException(`Trip with ID ${id} not found`);
+    }
+
     return trip;
   }
 
@@ -133,6 +144,11 @@ export class TripsService {
       .delete(schema.trips)
       .where(eq(schema.trips.id, id))
       .returning();
+
+    if (!trip) {
+      throw new NotFoundException(`Trip with ID ${id} not found`);
+    }
+
     return trip;
   }
 
@@ -149,7 +165,7 @@ export class TripsService {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
     // 插入 trip member，預設唔係 Admin
@@ -170,14 +186,21 @@ export class TripsService {
    * 例如：DELETE /trips/1/members/2
    */
   async removeMember(tripId: number, userId: number) {
-    await this.db
+    const result = await this.db
       .delete(schema.tripMembers)
       .where(
         and(
           eq(schema.tripMembers.tripId, tripId),
           eq(schema.tripMembers.userId, userId),
         ),
+      )
+      .returning();
+
+    if (result.length === 0) {
+      throw new NotFoundException(
+        `Member with User ID ${userId} not found in Trip ${tripId}`,
       );
+    }
 
     return { message: 'Member removed successfully' };
   }

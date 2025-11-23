@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
@@ -65,9 +65,15 @@ export class UsersService {
    * findOne(1) -> SELECT * FROM users WHERE id = 1 LIMIT 1
    */
   async findOne(id: number) {
-    return this.db.query.users.findFirst({
+    const user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, id),
     });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    return user;
   }
 
   /**
@@ -89,6 +95,11 @@ export class UsersService {
       .set(updateUserDto)
       .where(eq(schema.users.id, id))
       .returning();
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
     return user;
   }
 
@@ -108,6 +119,11 @@ export class UsersService {
       .delete(schema.users)
       .where(eq(schema.users.id, id))
       .returning();
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
     return user;
   }
 }

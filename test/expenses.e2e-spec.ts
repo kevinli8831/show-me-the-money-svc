@@ -76,6 +76,12 @@ describe('ExpensesController (e2e)', () => {
     expect(response.body.id).toBe(createdExpenseId);
   });
 
+  it('/expenses/:id (GET) - Get One Expense (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .get('/expenses/999999')
+      .expect(404);
+  });
+
   it('/expenses/:id (PATCH) - Update Expense', async () => {
     const response = await request(app.getHttpServer())
       .patch(`/expenses/${createdExpenseId}`)
@@ -85,6 +91,13 @@ describe('ExpensesController (e2e)', () => {
     expect(response.body.title).toBe('Dinner');
   });
 
+  it('/expenses/:id (PATCH) - Update Expense (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .patch('/expenses/999999')
+      .send({ title: 'Ghost' })
+      .expect(404);
+  });
+
   it('/expenses/:id (DELETE) - Delete Expense', async () => {
     await request(app.getHttpServer())
       .delete(`/expenses/${createdExpenseId}`)
@@ -92,8 +105,12 @@ describe('ExpensesController (e2e)', () => {
 
     await request(app.getHttpServer())
       .get(`/expenses/${createdExpenseId}`)
-      .then((res) => {
-        expect(res.body).toEqual({});
-      });
+      .expect(404);
+  });
+
+  it('/expenses/:id (DELETE) - Delete Expense (Not Found)', async () => {
+    await request(app.getHttpServer())
+      .delete('/expenses/999999')
+      .expect(404);
   });
 });

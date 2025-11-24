@@ -1,5 +1,7 @@
 import { pgTable, serial, varchar, boolean, timestamp } from 'drizzle-orm/pg-core';
 
+import { relations } from 'drizzle-orm';
+import { expenses } from './expenses';
 /**
  * Expense Categories Table Schema - 消費分類資料表
  * 
@@ -49,3 +51,7 @@ export const expenseCategories = pgTable('expense_categories', {
   /** 創建時間（自動設定） */
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const expenseCategoriesRelations = relations(expenseCategories, ({ many }) => ({
+  expenses: many(expenses),
+}));

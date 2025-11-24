@@ -60,10 +60,11 @@ export class TripsController {
   @Get()
   @ApiOperation({ summary: '獲取所有 Trips', description: '支援 ?include=members 查詢參數' })
   @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members', example: 'members' })
+  @ApiQuery({ name: 'userId', required: false, description: 'User ID for filtering trips', example: '1' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved trips' })
-  async findAll(@Query('include') include?: string) {
+  async findAll(@Query('include') include?: string, @Query('userId') userId?: number) {
     const includeOptions = include?.split(',') || [];
-    const trips = await this.tripsService.findAll(includeOptions);
+    const trips = await this.tripsService.findAll(includeOptions, userId);
     return trips.map(trip => this.mapTripResponse(trip));
   }
 

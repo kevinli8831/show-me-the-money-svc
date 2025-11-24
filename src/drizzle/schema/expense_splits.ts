@@ -1,6 +1,8 @@
-import { pgTable, bigserial, bigint, decimal, varchar, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import { pgTable, bigserial, bigint, decimal, varchar, text, timestamp, unique, pgEnum } from 'drizzle-orm/pg-core';
 import { expenses } from './expenses';
 import { users } from './users';
+
+export const splitMethodEnum = pgEnum('split_method_enum', ['equal', 'percentage', 'custom']);
 
 /**
  * Expense Splits Table Schema - 消費分帳資料表
@@ -67,7 +69,7 @@ export const expenseSplits = pgTable('expense_splits', {
    * - 'percentage': 百分比
    * - 'custom': 自訂金額
    */
-  splitMethod: varchar('split_method', { length: 20 }).default('equal'),
+  splitMethod: splitMethodEnum('split_method').default('equal'),
 
   /**
    * 備註（可選）

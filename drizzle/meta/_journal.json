@@ -29,6 +29,13 @@
       "when": 1763917599602,
       "tag": "0003_wooden_lilandra",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1763919666060,
+      "tag": "0004_mature_shadow_king",
+      "breakpoints": true
     }
   ]
 }

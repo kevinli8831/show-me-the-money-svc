@@ -4,7 +4,8 @@ import { UpdateTripDto } from './dto/update-trip.dto';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../drizzle/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, exists, or } from 'drizzle-orm';
+import { tripMembers, trips } from '../drizzle/schema';
 
 /**
  * TripsService - 處理所有 Trip 相關嘅業務邏輯
@@ -90,17 +91,39 @@ export class TripsService {
    * findAll(['members']) -> 包括 members
    * findAll(['members', 'expenses']) -> 包括 members 同 expenses
    */
-  async findAll(include: string[] = []) {
-    return this.db.query.trips.findMany({
-      ...(include.includes('members') && {
+  async findAll(include: string[] = [], userId?: number) {
+    // 建 where 條件（filter by userId）
+    let where: any = undefined;
+    if (userId) {
+      // 假設你有 subquery 拉 trip_members（user 參加或創建）
+      const userTripsSubquery = this.db
+        .select({ tripId: tripMembers.tripId })
+        .from(tripMembers)
+        .where(eq(tripMembers.userId, userId));
+
+      where = or(
+        eq(trips.creatorUserId, userId),  // 創建人
+        exists(userTripsSubquery)         // 或參加人
+      );
+    }
+
+    // 建 with 條件（根據 include）
+    const withClause: any = {};
+    if (include.includes('members')) {
+      withClause.tripMembers = {
         with: {
-          tripMembers: {
-            with: {
-              user: true,
-            },
-          },
+          user: true,  // 拉 user 資料
         },
-      }),
+        orderBy: tripMembers.joinedAt,  // 可選：按加入時間排序
+      };
+    }
+    // 可以加其他 include e.g. if (include.includes('expenses')) { withClause.expenses = { ... }; }
+
+    return this.db.query.trips.findMany({
+      where,
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
+      orderBy: trips.createdAt,  // 全局排序，按創建時間
+      // limit: 20,  // 可選，加 pagination
     });
   }
 

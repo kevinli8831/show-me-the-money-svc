@@ -1,4 +1,6 @@
-import { pgTable, bigserial, varchar, text, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
+import { pgTable, bigserial, varchar, text, timestamp, boolean, integer, pgEnum } from 'drizzle-orm/pg-core';
+
+export const userTypeEnum = pgEnum('user_type_enum', ['virtual', 'email', 'google', 'apple']);
 
 /**
  * Users Table Schema - 用戶資料表
@@ -82,7 +84,7 @@ export const users = pgTable('users', {
    * 
    * 預設值：'email'
    */
-  userType: varchar('user_type', { length: 20 }).notNull().default('email'),
+  userType: userTypeEnum('user_type').notNull().default('email'),
 
   /**
    * Avatar URL（可選）

@@ -1,7 +1,10 @@
-import { pgTable, bigserial, bigint, varchar, decimal, char, date, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, bigserial, bigint, varchar, decimal, char, date, text, timestamp, integer } from 'drizzle-orm/pg-core';
 import { trips } from './trips';
 import { users } from './users';
-
+import { expenseCategories } from './expense_categories';
+import { relations } from 'drizzle-orm';
+import { expensePayers } from './expense_payers';
+import { expenseSplits } from './expense_splits';
 /**
  * Expenses Table Schema - 消費記錄資料表
  * 
@@ -52,11 +55,11 @@ export const expenses = pgTable('expenses', {
   currency: char('currency', { length: 3 }),
 
   /**
-   * 消費類別（可選）
+   * 消費類別 ID（可選，Foreign Key）
    * 
-   * 例如: "食飯", "住宿", "交通", "娛樂"
+   * 關聯到 expense_categories table
    */
-  category: varchar('category', { length: 50 }),
+  categoryId: integer('category_id').references(() => expenseCategories.id),
 
   /**
    * 備註（可選）
@@ -83,3 +86,32 @@ export const expenses = pgTable('expenses', {
   /** 創建時間（自動設定） */
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+
+// 1. 正確嘅 expensesRelations（從 expenses 拉多對一）
+export const expensesRelations = relations(expenses, ({ one, many }) => ({
+  // one-to-one: category
+  category: one(expenseCategories, {
+    fields: [expenses.categoryId],
+    references: [expenseCategories.id],
+  }),
+  // one-to-many: expensePayers（一個 expense 多 payers）
+  expensePayers: many(expensePayers),
+  // one-to-many: expenseSplits（一個 expense 多 splits）
+  expenseSplits: many(expenseSplits),
+}));
+// 2. 反向關係（可選，從 payers 拉返 expense）
+export const expensePayersRelations = relations(expensePayers, ({ one }) => ({
+  expense: one(expenses, {
+    fields: [expensePayers.expenseId],  // 假設你有 expenseId field
+    references: [expenses.id],
+  }),
+}));
+
+// 3. 同樣 splits 反向（可選）
+export const expenseSplitsRelations = relations(expenseSplits, ({ one }) => ({
+  expense: one(expenses, {
+    fields: [expenseSplits.expenseId],
+    references: [expenses.id],
+  }),
+}));

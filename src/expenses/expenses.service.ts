@@ -144,7 +144,13 @@ export class ExpensesService {
    * 獲取所有 Expenses
    */
   async findAll() {
-    return this.db.query.expenses.findMany();
+    return this.db.query.expenses.findMany({
+      with: {
+        category: true,
+        expensePayers: true,
+        expenseSplits: true,
+      },
+    });
   }
 
   /**

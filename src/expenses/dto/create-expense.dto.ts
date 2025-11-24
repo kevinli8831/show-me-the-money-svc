@@ -43,11 +43,11 @@ export class CreateExpenseDto {
   currency?: string;
 
   /**
-   * 消費類別（可選）
+   * 消費類別 ID（可選）
    * 
-   * 例如: "食飯", "住宿", "交通"
+   * 對應 expense_categories table 嘅 ID
    */
-  category?: string;
+  categoryId?: number;
 
   /**
    * 備註（可選）

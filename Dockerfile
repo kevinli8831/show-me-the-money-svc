@@ -12,5 +12,5 @@ WORKDIR /app
 # 直接 copy 晒 builder 嘅全部，唔使理結構
 COPY --from=builder /app ./
 
-EXPOSE 3000
+EXPOSE 3008
 CMD ["node", "dist/src/main.js"]  

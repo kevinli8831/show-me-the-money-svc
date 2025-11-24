@@ -1,10 +1,18 @@
 ﻿version: "3.9"
 services:
-  api:
-    image: ghcr.io/kevinli8831/show-me-the-money-svc:latest
+  show-me-the-money-svc:
+    image: ghcr.io/kevinli8831/show-me-the-money-svc/show-me-the-money-svc:latest
     container_name: show-me-the-money-svc
     restart: always
     ports:
-      - "3000:3000"
+      - "8080:3008"
     env_file:
-      - .env.development                  # 直接讀你 repo 根目錄嘅 .env（超方便）
+      - .env.development
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: always
+    volumes:
+      - //var/run/docker.sock:/var/run/docker.sock
+    command: --interval 30 --cleanup show-me-the-money-svc

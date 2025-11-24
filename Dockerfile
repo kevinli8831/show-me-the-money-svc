@@ -1,3 +1,4 @@
+# Dockerfile —— 專為 dist/src/main.js 而設
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
@@ -5,11 +6,11 @@ RUN npm install -g pnpm@latest && pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm run build
 
+# Production
 FROM node:20-alpine
 WORKDIR /app
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
+# 直接 copy 晒 builder 嘅全部，唔使理結構
+COPY --from=builder /app ./
 
 EXPOSE 3000
-CMD ["node", "dist/main.js"]   
+CMD ["node", "dist/src/main.js"]  

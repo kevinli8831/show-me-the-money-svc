@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
+import { HttpModule } from '@nestjs/axios';
 import { DrizzleModule } from '../drizzle/drizzle.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -14,6 +15,7 @@ import { MemberTokenGuard } from './guards/member-token.guard';
 @Module({
   imports: [
     PassportModule,
+    HttpModule,
     JwtModule.register({}),
     ConfigModule,
     DrizzleModule,
@@ -29,4 +31,4 @@ import { MemberTokenGuard } from './guards/member-token.guard';
   ],
   exports: [AuthService, MemberTokenGuard],
 })
-export class AuthModule {}
+export class AuthModule { }

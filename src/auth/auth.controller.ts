@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards, Post, Res } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards, Post, Res, Body, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
@@ -45,6 +45,25 @@ export class AuthController {
       `&userId=${encodeURIComponent(user.id)}`;   // 如有需要可以把 user 資訊一起傳
     // 2. Redirect俾 Frontend (包括 Tokens)
     res.redirect(redirectUrl);
+  }
+
+  /**
+   * Google Code Exchange (For Mobile/Expo)
+   * 
+   * 接收 Frontend (Expo/React Native) 傳黎嘅 Authorization Code，
+   * 後端自行向 Google 換 Token，然後 Login。
+   */
+  @Post('google/exchange')
+  async googleAuthExchange(@Body('code') code: string) {
+    if (!code) {
+      throw new BadRequestException('Authorization code is required');
+    }
+
+    // 1. 用 Code 換 User Profile
+    const googleUser = await this.authService.exchangeCodeForUser(code);
+
+    // 2. Login (Generate JWT)
+    return this.authService.login(googleUser);
   }
 
   // ... Apple endpoints (commented out) ...

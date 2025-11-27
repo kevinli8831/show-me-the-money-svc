@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LoggingInterceptor } from './logging.interceptor';
@@ -36,10 +37,20 @@ async function findAvailablePort(startPort: number): Promise<number> {
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // Use Winston as the global logger
   const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
   app.useLogger(logger);
+
+  // Enable CORS
+  const configService = app.get(ConfigService);
+  const frontendUrl = configService.get('FRONTEND_URL') || 'http://localhost:8081';
+
+  app.enableCors({
+    origin: [frontendUrl, 'http://localhost:8081'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
 
   /**
    * 啟用全局 ValidationPipe
@@ -77,9 +88,9 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
-  
+
   /**
    * SwaggerModule.setup('api', app, document)
    * - 第一個參數 'api' 係 Swagger UI 嘅 path
@@ -105,11 +116,11 @@ async function bootstrap() {
   }
 
   await app.listen(port);
-  
+
   // 獲取當前環境
   const env = process.env.NODE_ENV || 'development';
   const baseUrl = await app.getUrl();
-  
+
   // 顯示啟動資訊
   logger.log('='.repeat(60));
   logger.log(`🚀 Application is running!`);

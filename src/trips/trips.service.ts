@@ -6,6 +6,7 @@ import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../drizzle/schema';
 import { eq, and, exists, or } from 'drizzle-orm';
 import { tripMembers, trips } from '../drizzle/schema';
+import * as crypto from 'crypto';
 
 /**
  * TripsService - 處理所有 Trip 相關嘅業務邏輯
@@ -19,7 +20,7 @@ import { tripMembers, trips } from '../drizzle/schema';
 export class TripsService {
   constructor(
     @Inject(DrizzleAsyncProvider) private readonly db: NeonHttpDatabase<typeof schema>,
-  ) {}
+  ) { }
 
   /**
    * 創建新 Trip
@@ -33,52 +34,46 @@ export class TripsService {
    * - 唔使用 transaction 因為 neon-http driver 唔 support
    * - 如果 trip member 插入失敗，只會 log error，唔會影響 trip creation
    */
-  async create(createTripDto: CreateTripDto) {
+  async create(createTripDto: CreateTripDto, user?: any) {
     // 準備 trip data
     const tripData: any = {
       ...createTripDto,
     };
 
     // 將 Date object 轉做 string (YYYY-MM-DD)
-    // 例如: new Date('2025-10-23') -> '2025-10-23'
     if (createTripDto.startDate) {
       tripData.startDate = createTripDto.startDate.toISOString().split('T')[0];
     }
     if (createTripDto.endDate) {
       tripData.endDate = createTripDto.endDate.toISOString().split('T')[0];
     }
-
-    // 插入 trip 到 database，returning() 會 return 返剛插入嘅 record
+    const newToken = crypto.randomUUID();
+    // 插入 trip 到 database
     const [trip] = await this.db
       .insert(schema.trips)
       .values(tripData)
       .returning() as any[];
 
-    // 自動將 creator 加入做 trip member (Admin)
-    if (createTripDto.creatorUserId) {
-      try {
-        // 先搵返個 user 嚟拎佢個 name (因為 trip_members table 要 userName)
-        const user = await this.db.query.users.findFirst({
-          where: eq(schema.users.id, createTripDto.creatorUserId),
-        });
+    tripData.creatorMemberToken = newToken;
 
-        if (user) {
-          // 插入 trip member record
-          await this.db.insert(schema.tripMembers).values({
-            tripId: trip.id,
-            userId: createTripDto.creatorUserId,
-            userName: user.name,
-            isAdmin: true, // Creator 預設係 Admin
-          });
-        }
-      } catch (error) {
-        // 如果 trip member 插入失敗（例如 user 唔存在），只 log error
-        // 唔會 throw，確保 trip 仍然成功 create
-        console.error('[TripsService] Error creating trip member:', error);
-      }
-    }
+    // Generate Token if not provided (though usually not provided for new trip)
+    // If creatorMemberToken is passed (e.g. from previous guest session), use it?
+    // But here we are creating a NEW trip.
+    // If the creator is a Guest, they might already have a token for ANOTHER trip.
+    // But for THIS trip, they need a NEW token.
+    // Wait, memberToken is per TRIP.
+    // So we always generate a new one.
 
-    return trip;
+    const [member] = await this.db.insert(schema.tripMembers).values({
+      tripId: trip.id,
+      userId: user?.id,
+      userName: user?.name,
+      isAdmin: true,
+      isGuest: !user,
+      memberToken: newToken,
+    }).returning() as any[];
+
+    return { trip, member: { memberToken: newToken, name: user?.name } };
   }
 
   /**
@@ -91,18 +86,18 @@ export class TripsService {
    * findAll(['members']) -> 包括 members
    * findAll(['members', 'expenses']) -> 包括 members 同 expenses
    */
-  async findAll(include: string[] = [], userId?: number) {
+  async findAll(include: string[] = [], memberToken?: string) {
     // 建 where 條件（filter by userId）
     let where: any = undefined;
-    if (userId) {
+    if (memberToken) {
       // 假設你有 subquery 拉 trip_members（user 參加或創建）
       const userTripsSubquery = this.db
-        .select({ tripId: tripMembers.tripId })
-        .from(tripMembers)
-        .where(eq(tripMembers.userId, userId));
+        .select({ tripId: schema.tripMembers.tripId })
+        .from(schema.tripMembers)
+        .where(eq(schema.tripMembers.memberToken, memberToken));
 
       where = or(
-        eq(trips.creatorUserId, userId),  // 創建人
+        eq(schema.trips.creatorMemberToken, memberToken),  // 創建人
         exists(userTripsSubquery)         // 或參加人
       );
     }
@@ -117,12 +112,20 @@ export class TripsService {
         orderBy: tripMembers.joinedAt,  // 可選：按加入時間排序
       };
     }
+    if (include.includes('expense')) {
+      withClause.expense = {
+        with: {
+          user: true,  // 拉 user 資料
+        },
+        orderBy: schema.expenses.createdAt,  // 可選：按加入時間排序
+      };
+    }
     // 可以加其他 include e.g. if (include.includes('expenses')) { withClause.expenses = { ... }; }
 
     return this.db.query.trips.findMany({
       where,
       with: Object.keys(withClause).length > 0 ? withClause : undefined,
-      orderBy: trips.createdAt,  // 全局排序，按創建時間
+      orderBy: schema.trips.createdAt,  // 全局排序，按創建時間
       // limit: 20,  // 可選，加 pagination
     });
   }
@@ -254,5 +257,50 @@ export class TripsService {
     }
 
     return { message: 'Member removed successfully' };
+  }
+  /**
+   * 生成 Member Token
+   * 格式: mt + 16位 Base64Url
+   */
+  private generateMemberToken(): string {
+    const buffer = crypto.randomBytes(12); // 12 bytes = 96 bits
+    const base64Url = buffer.toString('base64url'); // ~16 chars
+    return `mt_${base64Url}`;
+  }
+
+  /**
+   * Join Trip (Guest)
+   * 
+   * 用途：任何人點 Link 直接入團
+   * 
+   * 流程：
+   * 1. Check trip exists
+   * 2. Create Guest User
+   * 3. Create Trip Member (isGuest=true)
+   * 4. Return memberToken
+   */
+  async join(tripId: number, userName: string = 'Guest') {
+    const trip = await this.findOne(tripId); // Ensure trip exists
+
+    // Create Guest User
+    const [guestUser] = await this.db.insert(schema.users).values({
+      name: userName,
+      userType: 'guest',
+    }).returning() as any[];
+
+    // Generate Token
+    const memberToken = this.generateMemberToken();
+
+    // Create Trip Member
+    const [member] = await this.db.insert(schema.tripMembers).values({
+      tripId,
+      userId: guestUser.id,
+      userName: userName,
+      isAdmin: false,
+      isGuest: true,
+      memberToken: memberToken,
+    }).returning() as any[];
+
+    return { trip, memberToken: member.memberToken };
   }
 }

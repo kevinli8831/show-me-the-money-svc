@@ -9,6 +9,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 // import { AppleStrategy } from './strategies/apple.strategy';
+import { MemberTokenGuard } from './guards/member-token.guard';
 
 @Module({
   imports: [
@@ -24,7 +25,8 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     JwtStrategy,
     RefreshTokenStrategy,
     // AppleStrategy,
+    MemberTokenGuard,
   ],
-  exports: [AuthService],
+  exports: [AuthService, MemberTokenGuard],
 })
 export class AuthModule {}

@@ -1,4 +1,4 @@
-import { pgTable, bigint, boolean, timestamp, primaryKey, varchar } from 'drizzle-orm/pg-core';
+import { pgTable, bigint, boolean, timestamp, primaryKey, varchar, uuid } from 'drizzle-orm/pg-core';
 import { trips } from './trips';
 import { users } from './users';
 
@@ -53,6 +53,28 @@ export const tripMembers = pgTable('trip_members', {
    * - 冇 onDelete，所以如果 delete user，會 error（prevent accidental deletion）
    */
   userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id),
+
+  /**
+   * Member Token（唯一識別碼）
+   * 
+   * 用於 Guest-first 模式，後端靠此 Token 認人
+   * 必須 Unique
+   */
+  memberToken: uuid('member_token').defaultRandom().notNull().unique(),
+
+  /**
+   * 係咪虛擬成員
+   * 
+   * true = 主人幫你開嘅位，未有人認領
+   */
+  isVirtual: boolean('is_virtual').default(false).notNull(),
+
+  /**
+   * 係咪訪客
+   * 
+   * true = 真實設備加入，但未 Login Google
+   */
+  isGuest: boolean('is_guest').default(false).notNull(),
 
   /**
    * 係咪 Admin（預設 false）

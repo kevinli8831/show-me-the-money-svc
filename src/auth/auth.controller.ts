@@ -3,11 +3,14 @@ import { AuthService } from './auth.service';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ConfigService } from '@nestjs/config';
 // import { AppleOAuthGuard } from './guards/apple-oauth.guard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService,
+    private configService: ConfigService
+  ) { }
 
   /**
    * Google Login 入口
@@ -34,13 +37,10 @@ export class AuthController {
     // 1. 用 Google 俾嘅 User 資料 (req.user) 去做 Login
     const { accessToken, refreshToken, user } = await this.authService.login(req.user);
 
-    // 2. Return 結果俾 Frontend (包括 Tokens)
-    res.json({
-      message: 'Login successful',
-      accessToken,
-      refreshToken,
-      user,
-    });
+    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+
+    // 2. Redirect俾 Frontend (包括 Tokens)
+    res.redirect(`${frontendUrl}?accessToken=${accessToken}&refreshToken=${refreshToken}`);
   }
 
   // ... Apple endpoints (commented out) ...

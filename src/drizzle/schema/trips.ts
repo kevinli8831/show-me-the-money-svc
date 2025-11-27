@@ -1,4 +1,4 @@
-import { pgTable, bigserial, varchar, text, date, timestamp, bigint } from 'drizzle-orm/pg-core';
+import { pgTable, bigserial, varchar, text, date, timestamp, bigint, uuid } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
 /**
@@ -25,6 +25,13 @@ export const trips = pgTable('trips', {
    * 例如: "重廈旅行", "日本之旅"
    */
   name: varchar('name', { length: 100 }).notNull(),
+
+  /**
+   * Trip Share Code（必填，唯一）
+   * 
+   * 例如: "ABCD1234"
+   */
+  shareCode: varchar('share_code', { length: 8 }).notNull().unique(),
 
   /**
    * Trip 描述（可選）
@@ -60,8 +67,9 @@ export const trips = pgTable('trips', {
    * - 如果有 creatorUserId，TripsService.create 會自動將佢加入做 trip member (Admin)
    * - 冇 onDelete，所以如果 delete user，呢個 field 會變 NULL
    */
-  creatorUserId: bigint('creator_user_id', { mode: 'number' }).references(() => users.id),
+  creatorMemberToken: uuid('creator_member_token').defaultRandom().notNull().unique(),
 
+  creatorUserId: varchar('creator_user_id').references(() => users.id, { onDelete: 'set null' }),  // 創建者
   /**
    * 創建時間（自動設定）
    */
@@ -77,13 +85,17 @@ export const trips = pgTable('trips', {
 import { relations } from 'drizzle-orm';
 import { tripMembers } from './trip_members';
 
-export const tripsRelations = relations(trips, ({ many }) => ({
+export const tripsRelations = relations(trips, ({ many, one }) => ({
   /**
    * 一個 trip 有多個 trip members
    * 
    * 用法：
    * db.query.trips.findMany({ with: { tripMembers: true } })
    */
+  creator: one(users, {  // 從 trip 拉創建者
+    fields: [trips.creatorUserId],
+    references: [users.id],
+  }),
   tripMembers: many(tripMembers),
 }));
 

@@ -6,6 +6,8 @@ import { UpdateTripDto } from './dto/update-trip.dto';
 import { ClaimVirtualUserDto } from '../users/dto/claim-virtual-user.dto';
 import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { MemberTokenGuard } from '../auth/guards/member-token.guard';
+import { OptionalJwtGuard } from 'src/auth/guards/auth.guard';
 
 /**
  * TripsController - 處理所有 /trips 開頭嘅 HTTP requests
@@ -25,7 +27,7 @@ export class TripsController {
   constructor(
     private readonly tripsService: TripsService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   /**
    * 創建新 Trip
@@ -42,7 +44,10 @@ export class TripsController {
    * 注意：creatorUserId 會自動加入做 trip member (Admin)
    */
   @Post()
-  create(@Body() createTripDto: CreateTripDto) {
+  @UseGuards(OptionalJwtGuard)
+  async create(@Body() createTripDto: CreateTripDto, @Req() req: Request & { user?: any }) {
+    // If user is logged in (via JWT), use their ID
+    console.log(req.user)
     return this.tripsService.create(createTripDto);
   }
 
@@ -60,11 +65,11 @@ export class TripsController {
   @Get()
   @ApiOperation({ summary: '獲取所有 Trips', description: '支援 ?include=members 查詢參數' })
   @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members', example: 'members' })
-  @ApiQuery({ name: 'userId', required: false, description: 'User ID for filtering trips', example: '1' })
+  @ApiQuery({ name: 'memberToken', required: false, description: 'User ID for filtering trips', example: '1' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved trips' })
-  async findAll(@Query('include') include?: string, @Query('userId') userId?: number) {
+  async findAll(@Query('include') include?: string, @Query('memberToken') memberToken?: string) {
     const includeOptions = include?.split(',') || [];
-    const trips = await this.tripsService.findAll(includeOptions, userId);
+    const trips = await this.tripsService.findAll(includeOptions, memberToken);
     return trips.map(trip => this.mapTripResponse(trip));
   }
 
@@ -138,6 +143,18 @@ export class TripsController {
   }
 
   /**
+   * Join Trip (Guest)
+   * 
+   * Link: yourapp.com/t/ABCD1234 -> Frontend calls POST /trips/:id/join
+   */
+  @Post(':id/join')
+  @ApiOperation({ summary: '加入 Trip (Guest)', description: '任何人點 Link 直接入團，生成 memberToken' })
+  @ApiResponse({ status: 201, description: 'Successfully joined trip', schema: { example: { trip: {}, memberToken: 'uuid' } } })
+  join(@Param('id') id: string, @Body('userName') userName?: string) {
+    return this.tripsService.join(+id, userName);
+  }
+
+  /**
    * 認領虛擬成員
    * 
    * 當真人註冊後，可以 claim 之前嘅虛擬成員
@@ -160,6 +177,33 @@ export class TripsController {
     const realUserId = req.user.userId; // From JwtStrategy
     return this.usersService.claimVirtualUser(
       claimDto.virtualUserId,
+      realUserId,
+      +id,
+    );
+  }
+
+  /**
+   * 認領訪客成員 (Guest -> Real User)
+   * 
+   * 當 Guest User 登入後，將其 Guest 身份合併到 Real User
+   * 
+   * Header: x-member-token (Guest Member Token)
+   * Auth: Bearer Token (Real User)
+   */
+  @Post(':id/members/claim-guest')
+  @UseGuards(JwtAuthGuard, MemberTokenGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '認領訪客成員', description: '將當前 Guest Member (x-member-token) 合併到登入用戶' })
+  @ApiResponse({ status: 200, description: 'Successfully claimed guest member' })
+  async claimGuestMember(
+    @Param('id') id: string,
+    @Req() req,
+  ) {
+    const realUserId = req.user.userId; // From JwtStrategy
+    const guestMember = req.member; // From MemberTokenGuard
+
+    return this.usersService.claimGuestMember(
+      guestMember.userId,
       realUserId,
       +id,
     );

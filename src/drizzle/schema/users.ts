@@ -1,6 +1,6 @@
 import { pgTable, bigserial, varchar, text, timestamp, boolean, integer, pgEnum } from 'drizzle-orm/pg-core';
 
-export const userTypeEnum = pgEnum('user_type_enum', ['virtual', 'email', 'google', 'apple']);
+export const userTypeEnum = pgEnum('user_type_enum', ['virtual', 'email', 'google', 'apple', 'guest']);
 
 /**
  * Users Table Schema - 用戶資料表

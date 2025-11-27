@@ -51,91 +51,44 @@ export class ExpensesService {
    * }
    */
   async create(createExpenseDto: CreateExpenseDto) {
-    const { payers, splits, amount, ...expenseData } = createExpenseDto;
-    
     // === Validation ===
-    
-    // 1. Validate payers 總和 = amount
-    if (payers && payers.length > 0) {
-      const payersTotal = payers.reduce((sum, payer) => {
-        return sum + parseFloat(payer.amountPaid);
-      }, 0);
-      
-      const expenseAmount = parseFloat(amount);
-      
-      // 用 toFixed(2) 避免 floating point precision 問題
-      if (payersTotal.toFixed(2) !== expenseAmount.toFixed(2)) {
-        throw new Error(
-          `Payers 總和 ($${payersTotal.toFixed(2)}) 唔等於 expense amount ($${expenseAmount.toFixed(2)})`
-        );
-      }
+    // 1. Validate array lengths match
+    if (
+      createExpenseDto.participantTokens.length !== createExpenseDto.paidAmounts.length ||
+      createExpenseDto.participantTokens.length !== createExpenseDto.shareAmounts.length
+    ) {
+      throw new Error('Participant tokens, paid amounts, and share amounts must have the same length');
     }
+
+    // 2. Validate paid amounts total = expense amount
+    const paidTotal = createExpenseDto.paidAmounts.reduce((sum, amount) => sum + parseFloat(amount), 0);
+    const expenseAmount = parseFloat(createExpenseDto.amount);
     
-    // 2. Validate splits 總和 = amount 或 percentage = 1.0
-    if (splits && splits.length > 0) {
-      const expenseAmount = parseFloat(amount);
-      
-      // 檢查係用 shareAmount 定 percentage
-      const hasShareAmount = splits.some(s => s.shareAmount !== undefined);
-      const hasPercentage = splits.some(s => s.percentage !== undefined);
-      
-      if (hasShareAmount) {
-        // 用 shareAmount：總和應該 = amount
-        const splitsTotal = splits.reduce((sum, split) => {
-          return sum + (split.shareAmount ? parseFloat(split.shareAmount) : 0);
-        }, 0);
-        
-        if (splitsTotal.toFixed(2) !== expenseAmount.toFixed(2)) {
-          throw new Error(
-            `Splits 總和 ($${splitsTotal.toFixed(2)}) 唔等於 expense amount ($${expenseAmount.toFixed(2)})`
-          );
-        }
-      } else if (hasPercentage) {
-        // 用 percentage：總和應該 = 1.0
-        const percentageTotal = splits.reduce((sum, split) => {
-          return sum + (split.percentage ? parseFloat(split.percentage) : 0);
-        }, 0);
-        
-        if (percentageTotal.toFixed(4) !== '1.0000') {
-          throw new Error(
-            `Splits percentage 總和 (${percentageTotal.toFixed(4)}) 唔等於 1.0000`
-          );
-        }
-      }
+    if (Math.abs(paidTotal - expenseAmount) > 0.01) {
+       throw new Error(`Paid amounts total (${paidTotal}) does not match expense amount (${expenseAmount})`);
     }
+
+    // 3. Validate share amounts total = expense amount
+    const shareTotal = createExpenseDto.shareAmounts.reduce((sum, amount) => sum + parseFloat(amount), 0);
     
+    if (Math.abs(shareTotal - expenseAmount) > 0.01) {
+       throw new Error(`Share amounts total (${shareTotal}) does not match expense amount (${expenseAmount})`);
+    }
+
     // === Insert Data ===
-    
-    // 1. Insert expense
     const [expense] = await this.db
       .insert(schema.expenses)
-      .values({ ...expenseData, amount })
+      .values({
+        tripId: createExpenseDto.tripId,
+        description: createExpenseDto.description,
+        amount: createExpenseDto.amount,
+        currency: createExpenseDto.currency,
+        participantTokens: createExpenseDto.participantTokens,
+        paidAmounts: createExpenseDto.paidAmounts,
+        shareAmounts: createExpenseDto.shareAmounts,
+        createdByToken: createExpenseDto.createdByToken,
+      })
       .returning();
-
-    // 2. Insert expense payers（如果有提供）
-    if (payers && payers.length > 0) {
-      await this.db.insert(schema.expensePayers).values(
-        payers.map(payer => ({
-          expenseId: expense.id,
-          userId: payer.userId,
-          amountPaid: payer.amountPaid,
-        }))
-      );
-    }
-
-    // 3. Insert expense splits（如果有提供）
-    if (splits && splits.length > 0) {
-      await this.db.insert(schema.expenseSplits).values(
-        splits.map(split => ({
-          expenseId: expense.id,
-          userId: split.userId,
-          shareAmount: split.shareAmount,
-          percentage: split.percentage,
-          splitMethod: split.splitMethod || 'equal',
-          note: split.note,
-        }))
-      );
-    }
 
     return expense;
   }
@@ -144,13 +97,7 @@ export class ExpensesService {
    * 獲取所有 Expenses
    */
   async findAll() {
-    return this.db.query.expenses.findMany({
-      with: {
-        category: true,
-        expensePayers: true,
-        expenseSplits: true,
-      },
-    });
+    return this.db.query.expenses.findMany();
   }
 
   /**

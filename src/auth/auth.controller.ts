@@ -4,6 +4,7 @@ import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
+import { ApiBody, ApiOperation } from '@nestjs/swagger';
 // import { AppleOAuthGuard } from './guards/apple-oauth.guard';
 
 @Controller('auth')
@@ -54,6 +55,8 @@ export class AuthController {
    * 後端自行向 Google 換 Token，然後 Login。
    */
   @Post('google/exchange')
+  @ApiOperation({ summary: 'Google Code Exchange (For Mobile/Expo)' })
+  @ApiBody({ schema: { type: 'object', properties: { code: { type: 'string' } } } })
   async googleAuthExchange(@Body('code') code: string) {
     if (!code) {
       throw new BadRequestException('Authorization code is required');

@@ -47,7 +47,7 @@ async function bootstrap() {
   const frontendUrl = configService.get('FRONTEND_URL') || 'http://localhost:8081';
 
   app.enableCors({
-    origin: [frontendUrl, 'http://localhost:8081'],
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

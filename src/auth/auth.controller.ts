@@ -37,7 +37,7 @@ export class AuthController {
     // 1. 用 Google 俾嘅 User 資料 (req.user) 去做 Login
     const { accessToken, refreshToken, user } = await this.authService.login(req.user);
 
-    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:8081/auth/callback';
 
     // 2. Redirect俾 Frontend (包括 Tokens)
     res.redirect(`${frontendUrl}?accessToken=${accessToken}&refreshToken=${refreshToken}`);

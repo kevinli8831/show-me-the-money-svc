@@ -23,7 +23,7 @@ export class AuthService {
    * 
    * Used by mobile apps (Expo / React Native) to complete Google Sign-In.
    */
-  async exchangeCodeForUser(code: string) {
+  async exchangeCodeForUser(code: string, codeVerifier: string) {
     const clientId = this.configService.get('GOOGLE_CLIENT_ID');
     const clientSecret = this.configService.get('GOOGLE_CLIENT_SECRET');
     // For Expo/Mobile, redirect_uri might be different or not needed depending on the flow.
@@ -43,6 +43,7 @@ export class AuthService {
             client_secret: clientSecret,
             redirect_uri: redirectUri,
             grant_type: 'authorization_code',
+            code_verifier: codeVerifier,
           }).toString(),
           { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
         ),

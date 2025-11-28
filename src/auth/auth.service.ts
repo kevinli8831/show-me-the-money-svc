@@ -21,33 +21,55 @@ export class AuthService {
   /**
    * Exchange Google Authorization Code for User Profile
    * 
-   * Used by mobile apps (Expo / React Native) to complete Google Sign-In.
+   * 專為 Mobile App (Expo / React Native) 設計的 Google Login 流程。
+   * 
+   * 流程：
+   * 1. Frontend (App) 使用 `expo-auth-session` 彈出 Google Login 畫面。
+   * 2. User 登入後，Google 返回一個 Authorization Code 給 Frontend。
+   * 3. Frontend 將此 Code 連同 `redirectUri` 和 `codeVerifier` (PKCE) 發送給此 Backend API。
+   * 4. Backend 使用這些資料向 Google 換取 Access Token 和 ID Token。
+   * 5. Backend 解析 ID Token 取得 User Profile，並完成登入/註冊。
+   * 
+   * @param code Google Authorization Code
+   * @param redirectUri Frontend 使用的 Redirect URI (必須與 Frontend 一致)
+   * @param codeVerifier PKCE 驗證碼 (必須與 Frontend 生成的一致)
    */
-  async exchangeCodeForUser(code: string) {
-    const clientId = this.configService.get('GOOGLE_CLIENT_ID');
-    const clientSecret = this.configService.get('GOOGLE_CLIENT_SECRET');
-    // For Expo/Mobile, redirect_uri might be different or not needed depending on the flow.
-    // Usually it should match what was used in the frontend request.
-    // If using Expo AuthSession with useProxy, it's likely the Expo redirect URI.
-    // If using native Google Sign-In, redirect_uri might not be required or is empty.
-    // We try with the standard callback URL first, but if it fails, we might need to adjust.
-    const redirectUri = this.configService.get('GOOGLE_CALLBACK_URL');
+  async exchangeCodeForUser(code: string, redirectUri?: string, codeVerifier?: string) {
+    const clientId = this.configService.get('GOOGLE_CLIENT_ID').trim();
+    const clientSecret = this.configService.get('GOOGLE_CLIENT_SECRET').trim();
+
+    // Use provided redirectUri or fallback to env
+    const finalRedirectUri = redirectUri || this.configService.get('GOOGLE_CALLBACK_URL').trim();
+
+    console.log('Client ID:', clientId);
+    console.log('Client Secret length:', clientSecret?.length);
+    console.log('Redirect URI:', finalRedirectUri);
+    console.log('Code Verifier:', codeVerifier);
+
+    if (!clientSecret || !clientId) {
+      throw new Error('Missing client credentials in env');
+    }
+
+    const params: any = {
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: finalRedirectUri,
+      grant_type: 'authorization_code',
+    };
+
+    if (codeVerifier) {
+      params.code_verifier = codeVerifier;
+    }
 
     try {
       const tokenRes = await firstValueFrom(
         this.httpService.post(
           'https://oauth2.googleapis.com/token',
-          new URLSearchParams({
-            code,
-            client_id: clientId,
-            client_secret: clientSecret,
-            redirect_uri: redirectUri,
-            grant_type: 'authorization_code',
-          }).toString(),
+          new URLSearchParams(params).toString(),
           { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
         ),
       );
-
       const { id_token } = tokenRes.data;
 
       // Decode ID Token to get user info

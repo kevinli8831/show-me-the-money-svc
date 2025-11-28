@@ -56,14 +56,31 @@ export class AuthController {
    */
   @Post('google/exchange')
   @ApiOperation({ summary: 'Google Code Exchange (For Mobile/Expo)' })
-  @ApiBody({ schema: { type: 'object', properties: { code: { type: 'string' } } } })
-  async googleAuthExchange(@Body('code') code: string) {
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string' },
+        redirectUri: { type: 'string' },
+        codeVerifier: { type: 'string' },
+      },
+    },
+  })
+  async googleAuthExchange(
+    @Body('code') code: string,
+    @Body('redirectUri') redirectUri: string,
+    @Body('codeVerifier') codeVerifier: string,
+  ) {
+    console.log('Received code:', code);
+    console.log('Received redirectUri:', redirectUri);
+    console.log('Received codeVerifier:', codeVerifier);
+
     if (!code) {
       throw new BadRequestException('Authorization code is required');
     }
 
     // 1. 用 Code 換 User Profile
-    const googleUser = await this.authService.exchangeCodeForUser(code);
+    const googleUser = await this.authService.exchangeCodeForUser(code, redirectUri, codeVerifier);
 
     // 2. Login (Generate JWT)
     return this.authService.login(googleUser);

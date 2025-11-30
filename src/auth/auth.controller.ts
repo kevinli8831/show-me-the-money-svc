@@ -4,7 +4,7 @@ import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
-import { ApiBody, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 // import { AppleOAuthGuard } from './guards/apple-oauth.guard';
 
 @Controller('auth')
@@ -19,11 +19,11 @@ export class AuthController {
    * 當 User 訪問呢個 URL (GET /auth/google)，
    * GoogleOAuthGuard 會自動 Redirect User 去 Google 嘅 Login Page。
    */
-  @Get('google')
-  @UseGuards(GoogleOAuthGuard)
-  async googleAuth(@Req() req) {
-    // Guard 會搞掂 Redirect，呢度唔洗寫 code
-  }
+  // @Get('google')
+  // @UseGuards(GoogleOAuthGuard)
+  // async googleAuth(@Req() req) {
+  //   // Guard 會搞掂 Redirect，呢度唔洗寫 code
+  // }
 
   /**
    * Google Login Callback
@@ -32,21 +32,21 @@ export class AuthController {
    * GoogleOAuthGuard 會再次介入，拎 Google 俾嘅 Code 去換 User Profile。
    * 成功後，req.user 就會有 User 嘅資料。
    */
-  @Get('google/callback')
-  @UseGuards(GoogleOAuthGuard)
-  async googleAuthRedirect(@Req() req, @Res() res) {
-    // 1. 用 Google 俾嘅 User 資料 (req.user) 去做 Login
-    const { accessToken, refreshToken, user } = await this.authService.login(req.user);
+  // @Get('google/callback')
+  // @UseGuards(GoogleOAuthGuard)
+  // async googleAuthRedirect(@Req() req, @Res() res) {
+  //   // 1. 用 Google 俾嘅 User 資料 (req.user) 去做 Login
+  //   const { accessToken, refreshToken, user } = await this.authService.login(req.user);
 
-    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:8081';
+  //   const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:8081';
 
-    const redirectUrl = `${frontendUrl}/auth/callback` +
-      `?accessToken=${encodeURIComponent(accessToken)}` +
-      `&refreshToken=${encodeURIComponent(refreshToken)}` +
-      `&userId=${encodeURIComponent(user.id)}`;   // 如有需要可以把 user 資訊一起傳
-    // 2. Redirect俾 Frontend (包括 Tokens)
-    res.redirect(redirectUrl);
-  }
+  //   const redirectUrl = `${frontendUrl}/auth/callback` +
+  //     `?accessToken=${encodeURIComponent(accessToken)}` +
+  //     `&refreshToken=${encodeURIComponent(refreshToken)}` +
+  //     `&userId=${encodeURIComponent(user.id)}`;   // 如有需要可以把 user 資訊一起傳
+  //   // 2. Redirect俾 Frontend (包括 Tokens)
+  //   res.redirect(redirectUrl);
+  // }
 
   /**
    * Google Code Exchange (For Mobile/Expo)
@@ -126,8 +126,10 @@ export class AuthController {
    * 強制 User 下次要重新 Login。
    */
   @Post('logout')
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async logout(@Req() req) {
+    console.log("🚀 ~ AuthController ~ logout ~ req:", req)
     const userId = req.user['userId']; // JwtStrategy return userId
     await this.authService.logout(userId);
     return { message: 'Logout successful' };

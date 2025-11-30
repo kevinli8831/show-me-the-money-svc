@@ -69,7 +69,7 @@ export const trips = pgTable('trips', {
    */
   creatorMemberToken: uuid('creator_member_token').defaultRandom().notNull().unique(),
 
-  creatorUserId: varchar('creator_user_id').references(() => users.id, { onDelete: 'set null' }),  // 創建者
+  creatorUserId: bigint('creator_user_id', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),  // 創建者
   /**
    * 創建時間（自動設定）
    */
@@ -84,6 +84,7 @@ export const trips = pgTable('trips', {
  */
 import { relations } from 'drizzle-orm';
 import { tripMembers } from './trip_members';
+import { expenses } from './expenses';
 
 export const tripsRelations = relations(trips, ({ many, one }) => ({
   /**
@@ -97,5 +98,6 @@ export const tripsRelations = relations(trips, ({ many, one }) => ({
     references: [users.id],
   }),
   tripMembers: many(tripMembers),
+  expenses: many(expenses),
 }));
 

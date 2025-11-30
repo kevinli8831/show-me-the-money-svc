@@ -82,6 +82,13 @@ async function bootstrap() {
    * - setDescription: API 文檔描述
    * - setVersion: API 版本號
    */
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,          // 移除未在 DTO 中定義的屬性
+      forbidNonWhitelisted: true, // 發現多餘屬性時拋錯
+      transform: true,          // 自動把字串轉成數字、日期等
+    }),
+  );
   const config = new DocumentBuilder()
     .setTitle('Show Me The Money API')
     .setDescription('The Show Me The Money API description')

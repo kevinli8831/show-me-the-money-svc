@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { IsDateString, IsOptional, IsString } from 'class-validator';
 
 /**
  * CreateTripDto - 創建 Trip 嘅 Data Transfer Object
@@ -19,12 +20,17 @@ export class CreateTripDto {
    * Trip 名稱
    * 例如: "重廈旅行"
    */
+  @ApiProperty({ type: String, required: true })
+  @IsString()
   name: string;
 
   /**
    * Trip 描述（可選）
    * 例如: "去重慶同廈門玩"
    */
+  @ApiProperty({ type: String, required: false })
+  @IsOptional()
+  @IsString()
   description?: string;
 
   /**
@@ -33,7 +39,9 @@ export class CreateTripDto {
    * 如果有提供，他已經登入了
    * @Type(() => Number) 確保 JSON number 轉做 TypeScript number
    */
+  @ApiProperty({ type: Number, required: false })
   @Type(() => Number)
+  @IsOptional()
   userId?: number;
 
   /**
@@ -43,17 +51,29 @@ export class CreateTripDto {
    * @Type(() => Date) 會自動轉做 Date object
    * @ApiProperty({ format: 'date' }) 會係 Swagger 顯示做 date picker
    */
-  @ApiProperty({ type: String, format: 'date' })
-  @Type(() => Date)
-  startDate?: Date;
+  @ApiProperty({ type: String, format: 'date', required: false, example: '2025-11-30' })
+  @IsDateString()
+  @IsOptional()
+  startDate?: string;
 
   /**
    * 結束日期（可選）
    * 
-   * 同 startDate 一樣，會自動轉做 Date object
+   * 同 startDate 一樣
    */
-  @ApiProperty({ type: String, format: 'date' })
-  @Type(() => Date)
-  endDate?: Date;
+  @ApiProperty({ type: String, format: 'date', required: false, example: '2025-12-05' })
+  @IsDateString()
+  @IsOptional()
+  endDate?: string;
+
+  /**
+   * Share Code（可選）
+   * 
+   * 如果有提供，他已經登 入了
+   */
+  @ApiProperty({ type: String, required: false })
+  @IsOptional()
+  @IsString()
+  shareCode?: string;
 
 }

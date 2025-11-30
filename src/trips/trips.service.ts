@@ -38,23 +38,19 @@ export class TripsService {
     // 準備 trip data
     const tripData: any = {
       ...createTripDto,
+      shareCode: this.generateShareCode(),
     };
 
     // 將 Date object 轉做 string (YYYY-MM-DD)
-    if (createTripDto.startDate) {
-      tripData.startDate = createTripDto.startDate.toISOString().split('T')[0];
-    }
-    if (createTripDto.endDate) {
-      tripData.endDate = createTripDto.endDate.toISOString().split('T')[0];
-    }
+    // 將 Date object 轉做 string (YYYY-MM-DD)
     const newToken = crypto.randomUUID();
+    tripData.creatorMemberToken = newToken;
     // 插入 trip 到 database
     const [trip] = await this.db
       .insert(schema.trips)
       .values(tripData)
-      .returning() as any[];
+      .returning();
 
-    tripData.creatorMemberToken = newToken;
 
     // Generate Token if not provided (though usually not provided for new trip)
     // If creatorMemberToken is passed (e.g. from previous guest session), use it?
@@ -167,18 +163,19 @@ export class TripsService {
     };
 
     // 處理 Date 轉 string
+    // 處理 Date 轉 string
     if (updateTripDto.startDate) {
-      updateData.startDate = updateTripDto.startDate.toISOString().split('T')[0];
+      updateData.startDate = updateTripDto.startDate;
     }
     if (updateTripDto.endDate) {
-      updateData.endDate = updateTripDto.endDate.toISOString().split('T')[0];
+      updateData.endDate = updateTripDto.endDate;
     }
 
     const [trip] = await this.db
       .update(schema.trips)
       .set(updateData)
       .where(eq(schema.trips.id, id))
-      .returning() as any[];
+      .returning();
 
     if (!trip) {
       throw new NotFoundException(`Trip with ID ${id} not found`);
@@ -302,5 +299,62 @@ export class TripsService {
     }).returning() as any[];
 
     return { trip, memberToken: member.memberToken };
+  }
+
+  /**
+   * 生成 8 位 Base62 Share Code
+   * 
+   * 空間: 62^8 = ~218 trillion combinations
+   * 碰撞機率極低
+   */
+  private generateShareCode(): string {
+    const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    const length = 8;
+    let result = '';
+    const randomBytes = crypto.randomBytes(length);
+
+    for (let i = 0; i < length; i++) {
+      // 使用 modulo 運算，雖然有輕微 bias 但對 share code 影響可忽略
+      const index = randomBytes[i] % characters.length;
+      result += characters[index];
+    }
+
+    return result;
+  }
+
+  /**
+   * 根據 Share Code 獲取單個 Trip
+   * 
+   * @param include - 指定要 include 咩 nested data (e.g. ['members', 'expenses'])
+   */
+  async findByShareCode(shareCode: string, include: string[] = []) {
+    const withClause: any = {};
+    if (include.includes('members')) {
+      withClause.tripMembers = {
+        with: {
+          user: true,
+        },
+        orderBy: tripMembers.joinedAt,
+      };
+    }
+    if (include.includes('expenses')) {
+      withClause.expenses = {
+        with: {
+          // user: true, // expenses table doesn't have direct user relation, it uses arrays
+        },
+        orderBy: schema.expenses.createdAt,
+      };
+    }
+
+    const trip = await this.db.query.trips.findFirst({
+      where: eq(schema.trips.shareCode, shareCode),
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
+    });
+
+    if (!trip) {
+      throw new NotFoundException(`Trip with Share Code ${shareCode} not found`);
+    }
+
+    return trip;
   }
 }

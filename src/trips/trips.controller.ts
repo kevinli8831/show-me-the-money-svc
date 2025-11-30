@@ -7,7 +7,7 @@ import { ClaimVirtualUserDto } from '../users/dto/claim-virtual-user.dto';
 import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
-import { OptionalJwtGuard } from 'src/auth/guards/auth.guard';
+import { OptionalJwtGuard } from '../auth/guards/auth.guard';
 
 /**
  * TripsController - 處理所有 /trips 開頭嘅 HTTP requests
@@ -71,6 +71,22 @@ export class TripsController {
     const includeOptions = include?.split(',') || [];
     const trips = await this.tripsService.findAll(includeOptions, memberToken);
     return trips.map(trip => this.mapTripResponse(trip));
+  }
+
+  /**
+   * 根據 Share Code 獲取單個 Trip
+   * 
+   * GET /trips/share/:shareCode
+   */
+  @Get('share/:shareCode')
+  @ApiOperation({ summary: '根據 Share Code 獲取 Trip', description: '支援 ?include=members,expenses' })
+  @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members,expenses', example: 'members,expenses' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved trip' })
+  @ApiResponse({ status: 404, description: 'Trip not found' })
+  async findByShareCode(@Param('shareCode') shareCode: string, @Query('include') include?: string) {
+    const includeOptions = include?.split(',') || [];
+    const trip = await this.tripsService.findByShareCode(shareCode, includeOptions);
+    return this.mapTripResponse(trip);
   }
 
   /**

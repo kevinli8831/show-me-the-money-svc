@@ -43,7 +43,7 @@ export const tripMembers = pgTable('trip_members', {
    * - 好處：query 快啲，唔使 join
    * - 壞處：如果 user 改名，呢度唔會自動更新
    */
-  userName: varchar('user_name', { length: 100 }).notNull(),
+  userName: varchar('user_name', { length: 100 }),
 
   /**
    * User ID（必填，Foreign Key）
@@ -52,7 +52,7 @@ export const tripMembers = pgTable('trip_members', {
    * - Foreign Key 指向 users.id
    * - 冇 onDelete，所以如果 delete user，會 error（prevent accidental deletion）
    */
-  userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id),
+  userId: bigint('user_id', { mode: 'number' }).references(() => users.id),
 
   /**
    * Member Token（唯一識別碼）
@@ -102,7 +102,7 @@ export const tripMembers = pgTable('trip_members', {
    * - 但同一個 user 可以加入唔同嘅 trips
    * - 同一個 trip 可以有唔同嘅 users
    */
-  pk: primaryKey({ columns: [t.tripId, t.userId] }),
+  pk: primaryKey({ columns: [t.tripId, t.memberToken] }),
 }));
 
 /**
@@ -118,7 +118,7 @@ export const tripMembersRelations = relations(tripMembers, ({ one }) => ({
     fields: [tripMembers.tripId],
     references: [trips.id],
   }),
-  
+
   /**
    * 每個 trip member 係一個 user
    */

@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
+import { AuditService } from '../audit/audit.service';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../drizzle/schema';
@@ -21,7 +22,8 @@ import { eq } from 'drizzle-orm';
 export class ExpensesService {
   constructor(
     @Inject(DrizzleAsyncProvider) private readonly db: NeonHttpDatabase<typeof schema>,
-  ) {}
+    private readonly auditService: AuditService,
+  ) { }
 
   /**
    * 創建新 Expense（連同 payers 同 splits）
@@ -63,16 +65,16 @@ export class ExpensesService {
     // 2. Validate paid amounts total = expense amount
     const paidTotal = createExpenseDto.paidAmounts.reduce((sum, amount) => sum + parseFloat(amount), 0);
     const expenseAmount = parseFloat(createExpenseDto.amount);
-    
+
     if (Math.abs(paidTotal - expenseAmount) > 0.01) {
-       throw new Error(`Paid amounts total (${paidTotal}) does not match expense amount (${expenseAmount})`);
+      throw new Error(`Paid amounts total (${paidTotal}) does not match expense amount (${expenseAmount})`);
     }
 
     // 3. Validate share amounts total = expense amount
     const shareTotal = createExpenseDto.shareAmounts.reduce((sum, amount) => sum + parseFloat(amount), 0);
-    
+
     if (Math.abs(shareTotal - expenseAmount) > 0.01) {
-       throw new Error(`Share amounts total (${shareTotal}) does not match expense amount (${expenseAmount})`);
+      throw new Error(`Share amounts total (${shareTotal}) does not match expense amount (${expenseAmount})`);
     }
 
     // === Insert Data ===
@@ -119,15 +121,25 @@ export class ExpensesService {
    * 更新 Expense
    */
   async update(id: number, updateExpenseDto: UpdateExpenseDto) {
+    const updateData = updateExpenseDto;
     const [expense] = await this.db
       .update(schema.expenses)
-      .set(updateExpenseDto)
+      .set(updateData)
       .where(eq(schema.expenses.id, id))
       .returning();
 
     if (!expense) {
       throw new NotFoundException(`Expense with ID ${id} not found`);
     }
+
+    // Log audit
+    await this.auditService.log({
+      action: 'UPDATE_EXPENSE',
+      entityType: 'EXPENSE',
+      entityId: expense.id,
+      tripId: expense.tripId,
+      details: updateData,
+    });
 
     return expense;
   }
@@ -146,6 +158,14 @@ export class ExpensesService {
     if (!expense) {
       throw new NotFoundException(`Expense with ID ${id} not found`);
     }
+
+    // Log audit
+    await this.auditService.log({
+      action: 'DELETE_EXPENSE',
+      entityType: 'EXPENSE',
+      entityId: expense.id,
+      tripId: expense.tripId,
+    });
 
     return expense;
   }

@@ -16,10 +16,13 @@ import * as crypto from 'crypto';
  * 2. 自動將 trip creator 加入做 trip member (Admin)
  * 3. 管理 trip members (add/remove)
  */
+import { AuditService } from '../audit/audit.service';
+
 @Injectable()
 export class TripsService {
   constructor(
     @Inject(DrizzleAsyncProvider) private readonly db: NeonHttpDatabase<typeof schema>,
+    private readonly auditService: AuditService,
   ) { }
 
   /**
@@ -181,6 +184,15 @@ export class TripsService {
       throw new NotFoundException(`Trip with ID ${id} not found`);
     }
 
+    // Log audit
+    await this.auditService.log({
+      action: 'UPDATE_TRIP',
+      entityType: 'TRIP',
+      entityId: trip.id,
+      tripId: trip.id,
+      details: updateData,
+    });
+
     return trip;
   }
 
@@ -199,6 +211,14 @@ export class TripsService {
     if (!trip) {
       throw new NotFoundException(`Trip with ID ${id} not found`);
     }
+
+    // Log audit
+    await this.auditService.log({
+      action: 'DELETE_TRIP',
+      entityType: 'TRIP',
+      entityId: trip.id,
+      tripId: trip.id,
+    });
 
     return trip;
   }

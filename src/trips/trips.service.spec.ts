@@ -26,8 +26,16 @@ const mockDb = {
   },
 };
 
+import { AuditService } from '../audit/audit.service';
+
 describe('TripsService', () => {
   let service: TripsService;
+  let db: any;
+  let auditService: any;
+
+  const mockAuditService = {
+    log: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -37,10 +45,16 @@ describe('TripsService', () => {
           provide: DrizzleAsyncProvider,
           useValue: mockDb,
         },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
+        },
       ],
     }).compile();
 
     service = module.get<TripsService>(TripsService);
+    db = module.get(DrizzleAsyncProvider);
+    auditService = module.get<AuditService>(AuditService);
     jest.clearAllMocks();
   });
 

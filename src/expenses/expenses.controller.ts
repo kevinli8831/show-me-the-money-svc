@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Headers, Req, UseGuards } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
+import { OptionalJwtGuard } from '../auth/guards/auth.guard';
 
 /**
  * ExpensesController - 處理所有 /expenses 開頭嘅 HTTP requests
@@ -15,7 +16,7 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
  */
 @Controller('expenses')
 export class ExpensesController {
-  constructor(private readonly expensesService: ExpensesService) {}
+  constructor(private readonly expensesService: ExpensesService) { }
 
   /**
    * 創建新 Expense
@@ -67,8 +68,14 @@ export class ExpensesController {
    * }
    */
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateExpenseDto: UpdateExpenseDto) {
-    return this.expensesService.update(+id, updateExpenseDto);
+  @UseGuards(OptionalJwtGuard)
+  update(
+    @Param('id') id: string,
+    @Body() updateExpenseDto: UpdateExpenseDto,
+    @Headers('x-member-token') memberToken: string,
+    @Req() req,
+  ) {
+    return this.expensesService.update(+id, memberToken, updateExpenseDto, req.user?.userId);
   }
 
   /**
@@ -77,7 +84,12 @@ export class ExpensesController {
    * HTTP: DELETE /expenses/1
    */
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.expensesService.remove(+id);
+  @UseGuards(OptionalJwtGuard)
+  remove(
+    @Param('id') id: string,
+    @Headers('x-member-token') memberToken: string,
+    @Req() req,
+  ) {
+    return this.expensesService.remove(+id, memberToken, req.user?.userId);
   }
 }

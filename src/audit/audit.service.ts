@@ -14,6 +14,7 @@ export class AuditService {
     entityId: number;
     tripId?: number;
     performedByUserId?: number;
+    performedByMemberToken: string;
     details?: any;
   }) {
     await this.db.insert(schema.auditLogs).values({
@@ -22,6 +23,7 @@ export class AuditService {
       entityId: params.entityId,
       tripId: params.tripId,
       performedByUserId: params.performedByUserId,
+      performedByMemberToken: params.performedByMemberToken,
       details: params.details,
       createdAt: new Date(),
     });

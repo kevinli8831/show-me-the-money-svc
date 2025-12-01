@@ -160,12 +160,11 @@ export class TripsService {
    * 
    * 同樣需要處理 Date -> string 轉換
    */
-  async update(id: number, updateTripDto: UpdateTripDto) {
+  async update(id: number, memberToken: string, updateTripDto: UpdateTripDto, userId?: number) {
     const updateData: any = {
       ...updateTripDto,
     };
 
-    // 處理 Date 轉 string
     // 處理 Date 轉 string
     if (updateTripDto.startDate) {
       updateData.startDate = updateTripDto.startDate;
@@ -190,6 +189,8 @@ export class TripsService {
       entityType: 'TRIP',
       entityId: trip.id,
       tripId: trip.id,
+      performedByMemberToken: memberToken,
+      performedByUserId: userId,
       details: updateData,
     });
 
@@ -202,7 +203,7 @@ export class TripsService {
    * 注意：因為 trip_members 有 onDelete: 'cascade'，
    * 刪除 trip 會自動刪除所有相關嘅 trip members
    */
-  async remove(id: number) {
+  async remove(id: number, memberToken: string, userId?: number) {
     const [trip] = await this.db
       .delete(schema.trips)
       .where(eq(schema.trips.id, id))
@@ -218,6 +219,8 @@ export class TripsService {
       entityType: 'TRIP',
       entityId: trip.id,
       tripId: trip.id,
+      performedByMemberToken: memberToken,
+      performedByUserId: userId,
     });
 
     return trip;

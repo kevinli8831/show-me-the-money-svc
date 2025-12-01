@@ -120,7 +120,7 @@ export class ExpensesService {
   /**
    * 更新 Expense
    */
-  async update(id: number, updateExpenseDto: UpdateExpenseDto) {
+  async update(id: number, memberToken: string, updateExpenseDto: UpdateExpenseDto, userId?: number) {
     const updateData = updateExpenseDto;
     const [expense] = await this.db
       .update(schema.expenses)
@@ -138,6 +138,8 @@ export class ExpensesService {
       entityType: 'EXPENSE',
       entityId: expense.id,
       tripId: expense.tripId,
+      performedByMemberToken: memberToken,
+      performedByUserId: userId,
       details: updateData,
     });
 
@@ -149,7 +151,7 @@ export class ExpensesService {
    * 
    * 注意：會同時刪除所有相關嘅 expense_payers 同 expense_splits (cascade delete)
    */
-  async remove(id: number) {
+  async remove(id: number, memberToken: string, userId?: number) {
     const [expense] = await this.db
       .delete(schema.expenses)
       .where(eq(schema.expenses.id, id))
@@ -164,6 +166,8 @@ export class ExpensesService {
       action: 'DELETE_EXPENSE',
       entityType: 'EXPENSE',
       entityId: expense.id,
+      performedByMemberToken: memberToken,
+      performedByUserId: userId,
       tripId: expense.tripId,
     });
 

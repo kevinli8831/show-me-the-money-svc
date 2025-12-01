@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Req, UseGuards, Headers } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { TripsService } from './trips.service';
 import { CreateTripDto } from './dto/create-trip.dto';
@@ -118,8 +118,14 @@ export class TripsController {
    * Body: { "name": "新名稱" }
    */
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTripDto: UpdateTripDto) {
-    return this.tripsService.update(+id, updateTripDto);
+  @UseGuards(OptionalJwtGuard)
+  update(
+    @Param('id') id: string,
+    @Body() updateTripDto: UpdateTripDto,
+    @Headers('x-member-token') memberToken: string,
+    @Req() req,
+  ) {
+    return this.tripsService.update(+id, memberToken, updateTripDto, req.user?.userId);
   }
 
   /**
@@ -129,8 +135,13 @@ export class TripsController {
    * 注意：會自動刪除所有相關嘅 trip members (cascade delete)
    */
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.tripsService.remove(+id);
+  @UseGuards(OptionalJwtGuard)
+  remove(
+    @Param('id') id: string,
+    @Headers('x-member-token') memberToken: string,
+    @Req() req,
+  ) {
+    return this.tripsService.remove(+id, memberToken, req.user?.userId);
   }
 
   /**

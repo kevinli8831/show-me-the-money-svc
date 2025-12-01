@@ -71,9 +71,6 @@ export class AuthController {
     @Body('redirectUri') redirectUri: string,
     @Body('codeVerifier') codeVerifier: string,
   ) {
-    console.log('Received code:', code);
-    console.log('Received redirectUri:', redirectUri);
-    console.log('Received codeVerifier:', codeVerifier);
 
     if (!code) {
       throw new BadRequestException('Authorization code is required');

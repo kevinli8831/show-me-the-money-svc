@@ -109,7 +109,7 @@ import 'winston-daily-rotate-file';
         }),
       ],
     }),
-    
+
     /**
      * DrizzleModule - Database ORM Module
      * 
@@ -119,7 +119,7 @@ import 'winston-daily-rotate-file';
      * - 定義 database schema
      */
     DrizzleModule,
-    
+
     /**
      * Feature Modules
      * 
@@ -140,4 +140,4 @@ import 'winston-daily-rotate-file';
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

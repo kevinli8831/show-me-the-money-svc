@@ -109,11 +109,20 @@ export class AuthController {
    * Call 呢個 API 黎換取一個新嘅 Access Token，唔洗 User 重新 Login。
    */
   @Post('refresh')
-  @UseGuards(RefreshTokenGuard)
-  async refresh(@Req() req) {
-    const userId = req.user['sub'];
-    const refreshToken = req.user['refreshToken'];
-    return this.authService.refresh(userId, refreshToken);
+  @ApiOperation({ summary: 'Refresh Token' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        refreshToken: { type: 'string' },
+      },
+    },
+  })
+  async refresh(@Body('refreshToken') refreshToken: string) {
+    if (!refreshToken) {
+      throw new BadRequestException('Refresh token is required');
+    }
+    return this.authService.refresh(refreshToken);
   }
 
   /**

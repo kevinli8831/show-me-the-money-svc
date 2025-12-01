@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import { eq, and } from 'drizzle-orm';
+import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import * as schema from '../drizzle/schema';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
@@ -131,12 +132,44 @@ export class AuthService {
   }
 
   /**
+   * Encrypt text using AES-256-CBC
+   */
+  private encrypt(text: string): string {
+    const secret = this.configService.get<string>('JWT_REFRESH_SECRET') || 'default_secret_key_32_bytes_long!!';
+    // Ensure key is 32 bytes
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    let encrypted = cipher.update(text);
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    return iv.toString('hex') + ':' + encrypted.toString('hex');
+  }
+
+  /**
+   * Decrypt text using AES-256-CBC
+   */
+  private decrypt(text: string): string {
+    const secret = this.configService.get<string>('JWT_REFRESH_SECRET') || 'default_secret_key_32_bytes_long!!';
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const textParts = text.split(':');
+    const ivHex = textParts.shift();
+    if (!ivHex) throw new Error('Invalid encrypted text format');
+    const iv = Buffer.from(ivHex, 'hex');
+    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
+  }
+
+  /**
    * Login (Generate Tokens)
    * 
    * 1. Generate Access Token (短命，1日)。
    * 2. Generate Refresh Token (長命，1年)。
    * 3. 將 Refresh Token Hash 之後存入 Database (安全起見)。
-   * 4. Return 兩個 Token 俾 Frontend。
+   * 4. Encrypt Refresh Token。
+   * 5. Return Access Token & Encrypted Refresh Token 俾 Frontend。
    */
   async login(user: any) {
     const payload = { sub: user.id, email: user.email };
@@ -159,9 +192,12 @@ export class AuthService {
       .set({ refreshToken: hashedRefreshToken })
       .where(eq(schema.users.id, user.id));
 
+    // 4. Encrypt Refresh Token for Client
+    const encryptedRefreshToken = this.encrypt(refreshToken);
+
     return {
       accessToken,
-      refreshToken,
+      refreshToken: encryptedRefreshToken,
       user,
     };
   }
@@ -169,13 +205,34 @@ export class AuthService {
   /**
    * Refresh Access Token
    * 
-   * 當 Frontend 用 Refresh Token 黎換新 Access Token 時 Call。
-   * 1. Check User 是否存在。
-   * 2. Check User 是否有 Refresh Token。
-   * 3. 用 bcrypt 比較 Frontend 俾嘅 Token 同 Database 存嘅 Hash 是否吻合。
-   * 4. 如果吻合，Generate 一個新嘅 Access Token。
+   * 當 Frontend 用 Encrypted Refresh Token 黎換新 Access Token 時 Call。
+   * 1. Decrypt Encrypted Refresh Token 拎返原本個 JWT。
+   * 2. Verify JWT Signature。
+   * 3. Check User 是否存在。
+   * 4. Check User 是否有 Refresh Token。
+   * 5. 用 bcrypt 比較 Decrypted Token 同 Database 存嘅 Hash 是否吻合。
+   * 6. 如果吻合，Generate 一個新嘅 Access Token。
    */
-  async refresh(userId: number, refreshToken: string) {
+  async refresh(encryptedRefreshToken: string) {
+    let refreshToken: string;
+    try {
+      refreshToken = this.decrypt(encryptedRefreshToken);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid Refresh Token Format');
+    }
+
+    // Verify JWT
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+      });
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or Expired Refresh Token');
+    }
+
+    const userId = payload.sub;
+
     const [user] = await this.db.select().from(schema.users).where(
       eq(schema.users.id, userId),
     );
@@ -189,14 +246,14 @@ export class AuthService {
       throw new UnauthorizedException('Access Denied');
     }
 
-    const payload = { sub: user.id, email: user.email };
-    const newAccessToken = this.jwtService.sign(payload, {
+    const newAccessToken = this.jwtService.sign({ sub: user.id, email: user.email }, {
       secret: this.configService.get('JWT_ACCESS_SECRET'),
       expiresIn: '1d',
     });
 
     return {
       accessToken: newAccessToken,
+      user,
     };
   }
 

@@ -8,19 +8,19 @@ import { DrizzleAsyncProvider } from '../../drizzle/drizzle.provider';
 export class MemberTokenGuard implements CanActivate {
   constructor(
     @Inject(DrizzleAsyncProvider) private readonly db: NeonHttpDatabase<typeof schema>,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const tripId = request.params.tripId || request.params.id; // Support both :tripId and :id
+    const activityId = request.params.activityId || request.params.id; // Support both :activityId and :id
     const memberToken = request.headers['x-member-token'];
 
-    if (!tripId) {
-      // If no tripId in params, maybe it's in body or query?
+    if (!activityId) {
+      // If no activityId in params, maybe it's in body or query?
       // For now, we strictly require it in params for routes using this guard.
-      // But some routes might be /trips/:id/...
-      // If the route is not trip-specific, this guard shouldn't be used or should be optional.
-      return true; 
+      // But some routes might be /activities/:id/...
+      // If the route is not activity-specific, this guard shouldn't be used or should be optional.
+      return true;
     }
 
     if (!memberToken) {
@@ -28,15 +28,15 @@ export class MemberTokenGuard implements CanActivate {
     }
 
     // Find the member
-    const [member] = await this.db.select().from(schema.tripMembers).where(
+    const [member] = await this.db.select().from(schema.activityMembers).where(
       and(
-        eq(schema.tripMembers.tripId, Number(tripId)),
-        eq(schema.tripMembers.memberToken, memberToken),
+        eq(schema.activityMembers.activityId, Number(activityId)),
+        eq(schema.activityMembers.memberToken, memberToken),
       ),
     );
 
     if (!member) {
-      throw new UnauthorizedException('Invalid member token for this trip');
+      throw new UnauthorizedException('Invalid member token for this activity');
     }
 
     // Attach member to request

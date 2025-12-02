@@ -7,7 +7,7 @@ import { CreateExpenseDto } from '../src/expenses/dto/create-expense.dto';
 describe('ExpensesController (e2e)', () => {
   let app: INestApplication;
   let userId: number;
-  let tripId: number;
+  let activityId: number;
   let createdExpenseId: number;
 
   beforeAll(async () => {
@@ -25,23 +25,23 @@ describe('ExpensesController (e2e)', () => {
       .expect(201);
     userId = userRes.body.id;
 
-    // Create Trip
-    const tripRes = await request(app.getHttpServer())
-      .post('/trips')
-      .send({ name: 'Expense Trip', creatorUserId: userId })
+    // Create Activity
+    const activityRes = await request(app.getHttpServer())
+      .post('/activities')
+      .send({ name: 'Expense Activity', creatorUserId: userId })
       .expect(201);
-    tripId = tripRes.body.id;
+    activityId = activityRes.body.id;
   });
 
   afterAll(async () => {
-    if (tripId) await request(app.getHttpServer()).delete(`/trips/${tripId}`);
+    if (activityId) await request(app.getHttpServer()).delete(`/activities/${activityId}`);
     if (userId) await request(app.getHttpServer()).delete(`/users/${userId}`);
     await app.close();
   });
 
   it('/expenses (POST) - Create Expense', async () => {
     const createExpenseDto: CreateExpenseDto = {
-      tripId: tripId,
+      activityId: activityId,
       title: 'Lunch',
       amount: '150.00',
       createdBy: userId,

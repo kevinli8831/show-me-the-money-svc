@@ -8,7 +8,7 @@ describe('PaymentsController (e2e)', () => {
   let app: INestApplication;
   let user1Id: number;
   let user2Id: number;
-  let tripId: number;
+  let activityId: number;
   let createdPaymentId: number;
 
   beforeAll(async () => {
@@ -30,15 +30,15 @@ describe('PaymentsController (e2e)', () => {
       .send({ name: 'User 2', email: `u2-${Date.now()}@example.com` });
     user2Id = u2.body.id;
 
-    // Create Trip
-    const trip = await request(app.getHttpServer())
-      .post('/trips')
-      .send({ name: 'Payment Trip', creatorUserId: user1Id });
-    tripId = trip.body.id;
+    // Create Activity
+    const activity = await request(app.getHttpServer())
+      .post('/activities')
+      .send({ name: 'Payment Activity', creatorUserId: user1Id });
+    activityId = activity.body.id;
   });
 
   afterAll(async () => {
-    if (tripId) await request(app.getHttpServer()).delete(`/trips/${tripId}`);
+    if (activityId) await request(app.getHttpServer()).delete(`/activities/${activityId}`);
     if (user1Id) await request(app.getHttpServer()).delete(`/users/${user1Id}`);
     if (user2Id) await request(app.getHttpServer()).delete(`/users/${user2Id}`);
     await app.close();
@@ -46,7 +46,7 @@ describe('PaymentsController (e2e)', () => {
 
   it('/payments (POST) - Create Payment', async () => {
     const createPaymentDto: CreatePaymentDto = {
-      tripId: tripId,
+      activityId: activityId,
       fromUserId: user1Id,
       toUserId: user2Id,
       amount: '50.00',

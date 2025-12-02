@@ -10,9 +10,9 @@ export class AuditService {
 
   async log(params: {
     action: string;
-    entityType: 'TRIP' | 'EXPENSE' | 'MEMBER';
+    entityType: 'ACTIVITIES' | 'EXPENSE' | 'MEMBER';
     entityId: number;
-    tripId?: number;
+    activityId?: number;
     performedByUserId?: number;
     performedByMemberToken: string;
     details?: any;
@@ -21,7 +21,7 @@ export class AuditService {
       action: params.action,
       entityType: params.entityType,
       entityId: params.entityId,
-      tripId: params.tripId,
+      activityId: params.activityId,
       performedByUserId: params.performedByUserId,
       performedByMemberToken: params.performedByMemberToken,
       details: params.details,

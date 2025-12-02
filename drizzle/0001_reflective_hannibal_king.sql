@@ -1,4 +1,4 @@
-CREATE TABLE "trips" (
+CREATE TABLE "activities" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"name" varchar(100) NOT NULL,
 	"description" text,
@@ -8,18 +8,18 @@ CREATE TABLE "trips" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "trip_members" (
-	"trip_id" bigint NOT NULL,
+CREATE TABLE "activity_members" (
+	"activity_id" bigint NOT NULL,
 	"user_name" varchar(100) NOT NULL,
 	"user_id" bigint NOT NULL,
 	"is_admin" boolean DEFAULT false,
 	"joined_at" timestamp DEFAULT now(),
-	CONSTRAINT "trip_members_trip_id_user_id_pk" PRIMARY KEY("trip_id","user_id")
+	CONSTRAINT "activity_members_activity_id_user_id_pk" PRIMARY KEY("activity_id","user_id")
 );
 --> statement-breakpoint
 CREATE TABLE "expenses" (
 	"id" bigserial PRIMARY KEY NOT NULL,
-	"trip_id" bigint NOT NULL,
+	"activity_id" bigint NOT NULL,
 	"title" varchar(200) NOT NULL,
 	"amount" numeric(12, 2) NOT NULL,
 	"currency" char(3),
@@ -52,7 +52,7 @@ CREATE TABLE "expense_splits" (
 --> statement-breakpoint
 CREATE TABLE "payments" (
 	"id" bigserial PRIMARY KEY NOT NULL,
-	"trip_id" bigint NOT NULL,
+	"activity_id" bigint NOT NULL,
 	"from_user_id" bigint NOT NULL,
 	"to_user_id" bigint NOT NULL,
 	"amount" numeric(12, 2) NOT NULL,
@@ -77,16 +77,16 @@ ALTER TABLE "users" ADD COLUMN "is_virtual" boolean DEFAULT false;--> statement-
 ALTER TABLE "users" ADD COLUMN "claimed_by" integer;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "created_by" integer;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "created_at" timestamp DEFAULT now();--> statement-breakpoint
-ALTER TABLE "trips" ADD CONSTRAINT "trips_creator_user_id_users_id_fk" FOREIGN KEY ("creator_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trip_members" ADD CONSTRAINT "trip_members_trip_id_trips_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trips"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trip_members" ADD CONSTRAINT "trip_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "expenses" ADD CONSTRAINT "expenses_trip_id_trips_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trips"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "activities" ADD CONSTRAINT "activitys_creator_user_id_users_id_fk" FOREIGN KEY ("creator_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "activity_members" ADD CONSTRAINT "activity_members_activity_id_activitys_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "activity_members" ADD CONSTRAINT "activity_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "expenses" ADD CONSTRAINT "expenses_activity_id_activitys_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "expenses" ADD CONSTRAINT "expenses_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "expense_payers" ADD CONSTRAINT "expense_payers_expense_id_expenses_id_fk" FOREIGN KEY ("expense_id") REFERENCES "public"."expenses"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "expense_payers" ADD CONSTRAINT "expense_payers_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "expense_splits" ADD CONSTRAINT "expense_splits_expense_id_expenses_id_fk" FOREIGN KEY ("expense_id") REFERENCES "public"."expenses"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "expense_splits" ADD CONSTRAINT "expense_splits_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payments" ADD CONSTRAINT "payments_trip_id_trips_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trips"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_activity_id_activitys_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_from_user_id_users_id_fk" FOREIGN KEY ("from_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_to_user_id_users_id_fk" FOREIGN KEY ("to_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_claimed_by_users_id_fk" FOREIGN KEY ("claimed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

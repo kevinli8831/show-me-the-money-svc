@@ -1,17 +1,17 @@
 import { pgTable, bigserial, bigint, decimal, char, timestamp, text } from 'drizzle-orm/pg-core';
-import { trips } from './trips';
+import { activities } from './activities';
 import { users } from './users';
 
 /**
  * Payments Table Schema - 還款記錄資料表
  * 
  * 用途：
- * - 記錄 trip 入面嘅還款記錄
+ * - 記錄 activity 入面嘅還款記錄
  * - 記錄邊個還錢俾邊個
- * - 用於結算 trip 嘅欠款
+ * - 用於結算 activity 嘅欠款
  * 
  * 流程：
- * 1. Trip 完結後，計算每個人應該俾幾多錢（根據 expense_splits）
+ * 1. Activity 完結後，計算每個人應該俾幾多錢（根據 expense_splits）
  * 2. 計算每個人實際俾咗幾多錢（根據 expense_payers）
  * 3. 計算每個人欠幾多錢或者多俾咗幾多錢
  * 4. 用 payments 記錄還款
@@ -28,11 +28,11 @@ export const payments = pgTable('payments', {
   id: bigserial('id', { mode: 'number' }).primaryKey(),
 
   /**
-   * Trip ID（必填，Foreign Key）
+   * Activity ID（必填，Foreign Key）
    * 
-   * onDelete: 'cascade' = 刪除 trip 會自動刪除所有 payments
+   * onDelete: 'cascade' = 刪除 activity 會自動刪除所有 payments
    */
-  tripId: bigint('trip_id', { mode: 'number' }).notNull().references(() => trips.id, { onDelete: 'cascade' }),
+  activityId: bigint('activity_id', { mode: 'number' }).notNull().references(() => activities.id, { onDelete: 'cascade' }),
 
   /**
    * 付款人 User ID（必填，Foreign Key）

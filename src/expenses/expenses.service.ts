@@ -12,11 +12,11 @@ import { eq } from 'drizzle-orm';
  * 
  * 主要功能：
  * - CRUD operations for expenses
- * - 管理 trip 入面嘅消費記錄
+ * - 管理 activity 入面嘅消費記錄
  * 
  * 注意：
- * - 每個 expense 必須屬於一個 trip
- * - 刪除 trip 會自動刪除所有相關嘅 expenses (cascade delete)
+ * - 每個 expense 必須屬於一個 activity
+ * - 刪除 activity 會自動刪除所有相關嘅 expenses (cascade delete)
  */
 @Injectable()
 export class ExpensesService {
@@ -36,7 +36,7 @@ export class ExpensesService {
    * 
    * 例子：
    * createExpenseDto = {
-   *   tripId: 1,
+   *   activityId: 1,
    *   title: "晚餐",
    *   amount: "300.00",
    *   currency: "HKD",
@@ -81,7 +81,7 @@ export class ExpensesService {
     const [expense] = await this.db
       .insert(schema.expenses)
       .values({
-        tripId: createExpenseDto.tripId,
+        activityId: createExpenseDto.activityId,
         description: createExpenseDto.description,
         amount: createExpenseDto.amount,
         currency: createExpenseDto.currency,
@@ -137,7 +137,7 @@ export class ExpensesService {
       action: 'UPDATE_EXPENSE',
       entityType: 'EXPENSE',
       entityId: expense.id,
-      tripId: expense.tripId,
+      activityId: expense.activityId,
       performedByMemberToken: memberToken,
       performedByUserId: userId,
       details: updateData,
@@ -168,7 +168,7 @@ export class ExpensesService {
       entityId: expense.id,
       performedByMemberToken: memberToken,
       performedByUserId: userId,
-      tripId: expense.tripId,
+      activityId: expense.activityId,
     });
 
     return expense;

@@ -2,13 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import { CreateTripDto } from '../src/trips/dto/create-trip.dto';
+import { CreateActivityDto } from '../src/activities/dto/create-activity.dto';
 import { CreateUserDto } from '../src/users/dto/create-user.dto';
 
-describe('TripsController (e2e)', () => {
+describe('ActivitiesController (e2e)', () => {
   let app: INestApplication;
   let userId: number;
-  let createdTripId: number;
+  let createdActivityId: number;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -19,10 +19,10 @@ describe('TripsController (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
 
-    // Create a user for the trip
+    // Create a user for the activity
     const createUserDto: CreateUserDto = {
-      name: 'Trip Creator',
-      email: `trip-creator-${Date.now()}@example.com`,
+      name: 'Activity Creator',
+      email: `activity-creator-${Date.now()}@example.com`,
     };
     const userRes = await request(app.getHttpServer())
       .post('/users')
@@ -39,96 +39,96 @@ describe('TripsController (e2e)', () => {
     await app.close();
   });
 
-  it('/trips (POST) - Create Trip', async () => {
-    const createTripDto: CreateTripDto = {
-      name: 'Test Trip',
-      description: 'A trip to test e2e',
+  it('/activities (POST) - Create Activity', async () => {
+    const createActivityDto: CreateActivityDto = {
+      name: 'Test Activity',
+      description: 'A activity to test e2e',
       creatorUserId: userId,
     };
 
     const response = await request(app.getHttpServer())
-      .post('/trips')
-      .send(createTripDto)
+      .post('/activities')
+      .send(createActivityDto)
       .expect(201);
 
     expect(response.body).toHaveProperty('id');
-    expect(response.body.name).toBe(createTripDto.name);
+    expect(response.body.name).toBe(createActivityDto.name);
     expect(response.body.creatorUserId).toBe(userId);
-    createdTripId = response.body.id;
+    createdActivityId = response.body.id;
   });
 
-  it('/trips (POST) - Should create trip_member for creator', async () => {
-    // Query the database to check if trip_member was created
+  it('/activities (POST) - Should create activity_member for creator', async () => {
+    // Query the database to check if activity_member was created
     // We'll use a direct database query via a GET endpoint we'll create
     // For now, we'll verify by trying to add the same user again (should fail if already exists)
-    
+
     // Try to add the creator again - this should work for now since we don't have duplicate check
     // But we can verify the member exists by checking if we can remove them
     const response = await request(app.getHttpServer())
-      .delete(`/trips/${createdTripId}/members/${userId}`)
+      .delete(`/activities/${createdActivityId}/members/${userId}`)
       .expect(200);
 
     expect(response.body.message).toBe('Member removed successfully');
 
     // Add them back for other tests
     await request(app.getHttpServer())
-      .post(`/trips/${createdTripId}/members`)
+      .post(`/activities/${createdActivityId}/members`)
       .send({ userId })
       .expect(201);
   });
 
-  it('/trips (GET) - Get All Trips', async () => {
+  it('/activities (GET) - Get All Activities', async () => {
     const response = await request(app.getHttpServer())
-      .get('/trips')
+      .get('/activities')
       .expect(200);
 
     expect(Array.isArray(response.body)).toBe(true);
     expect(response.body.length).toBeGreaterThan(0);
   });
 
-  it('/trips/:id (GET) - Get One Trip', async () => {
+  it('/activities/:id (GET) - Get One Activity', async () => {
     const response = await request(app.getHttpServer())
-      .get(`/trips/${createdTripId}`)
+      .get(`/activities/${createdActivityId}`)
       .expect(200);
 
-    expect(response.body.id).toBe(createdTripId);
+    expect(response.body.id).toBe(createdActivityId);
   });
 
-  it('/trips/:id (GET) - Get One Trip (Not Found)', async () => {
+  it('/activities/:id (GET) - Get One Activity (Not Found)', async () => {
     await request(app.getHttpServer())
-      .get('/trips/999999')
+      .get('/activities/999999')
       .expect(404);
   });
 
-  it('/trips/:id (PATCH) - Update Trip', async () => {
+  it('/activities/:id (PATCH) - Update Activity', async () => {
     const response = await request(app.getHttpServer())
-      .patch(`/trips/${createdTripId}`)
-      .send({ name: 'Updated Trip Name' })
+      .patch(`/activities/${createdActivityId}`)
+      .send({ name: 'Updated Activity Name' })
       .expect(200);
 
-    expect(response.body.name).toBe('Updated Trip Name');
+    expect(response.body.name).toBe('Updated Activity Name');
   });
 
-  it('/trips/:id (PATCH) - Update Trip (Not Found)', async () => {
+  it('/activities/:id (PATCH) - Update Activity (Not Found)', async () => {
     await request(app.getHttpServer())
-      .patch('/trips/999999')
+      .patch('/activities/999999')
       .send({ name: 'Ghost' })
       .expect(404);
   });
 
-  it('/trips/:id (DELETE) - Delete Trip', async () => {
+  it('/activities/:id (DELETE) - Delete Activity', async () => {
     await request(app.getHttpServer())
-      .delete(`/trips/${createdTripId}`)
+      .delete(`/activities/${createdActivityId}`)
       .expect(200);
 
     await request(app.getHttpServer())
-      .get(`/trips/${createdTripId}`)
+      .get(`/activities/${createdActivityId}`)
       .expect(404);
   });
 
-  it('/trips/:id (DELETE) - Delete Trip (Not Found)', async () => {
+  it('/activities/:id (DELETE) - Delete Activity (Not Found)', async () => {
     await request(app.getHttpServer())
-      .delete('/trips/999999')
+      .delete('/activities/999999')
       .expect(404);
   });
 });

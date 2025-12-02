@@ -5,7 +5,7 @@ import { AppModule } from '../src/app.module';
 
 describe('Virtual Members (e2e)', () => {
   let app: INestApplication;
-  let createdTripId: number;
+  let createdActivityId: number;
   let createdVirtualUserId: number;
   let createdRealUserId: number;
   let accessToken: string;
@@ -39,9 +39,9 @@ describe('Virtual Members (e2e)', () => {
       expect(response.body.userType).toBe('email');
     });
 
-    it('should create a trip', async () => {
+    it('should create a activity', async () => {
       const response = await request(app.getHttpServer())
-        .post('/trips')
+        .post('/activities')
         .send({
           name: '日本旅行',
           description: '東京大阪之旅',
@@ -51,7 +51,7 @@ describe('Virtual Members (e2e)', () => {
         })
         .expect(201);
 
-      createdTripId = response.body.id;
+      createdActivityId = response.body.id;
       expect(response.body.name).toBe('日本旅行');
     });
 
@@ -72,9 +72,9 @@ describe('Virtual Members (e2e)', () => {
       expect(response.body.provider).toBeNull();
     });
 
-    it('should add virtual member to trip', async () => {
+    it('should add virtual member to activity', async () => {
       const response = await request(app.getHttpServer())
-        .post(`/trips/${createdTripId}/members`)
+        .post(`/activities/${createdActivityId}/members`)
         .send({
           userId: createdVirtualUserId,
         })
@@ -83,12 +83,12 @@ describe('Virtual Members (e2e)', () => {
       expect(response.body.message).toBe('Member added successfully');
     });
 
-    it('should get trip with members using include parameter', async () => {
+    it('should get activity with members using include parameter', async () => {
       const response = await request(app.getHttpServer())
-        .get(`/trips/${createdTripId}?include=members`)
+        .get(`/activities/${createdActivityId}?include=members`)
         .expect(200);
 
-      expect(response.body.id).toBe(createdTripId);
+      expect(response.body.id).toBe(createdActivityId);
       expect(response.body.members).toBeDefined();
       expect(Array.isArray(response.body.members)).toBe(true);
       expect(response.body.members.length).toBeGreaterThan(0);
@@ -101,32 +101,32 @@ describe('Virtual Members (e2e)', () => {
       expect(virtualMember.userName).toBe('Kevin');
     });
 
-    it('should get trip without members when include is not specified', async () => {
+    it('should get activity without members when include is not specified', async () => {
       const response = await request(app.getHttpServer())
-        .get(`/trips/${createdTripId}`)
+        .get(`/activities/${createdActivityId}`)
         .expect(200);
 
-      expect(response.body.id).toBe(createdTripId);
+      expect(response.body.id).toBe(createdActivityId);
       expect(response.body.members).toBeUndefined();
     });
 
-    it('should get all trips with members using include parameter', async () => {
+    it('should get all activities with members using include parameter', async () => {
       const response = await request(app.getHttpServer())
-        .get('/trips?include=members')
+        .get('/activities?include=members')
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
-      const trip = response.body.find((t: any) => t.id === createdTripId);
-      expect(trip).toBeDefined();
-      expect(trip.members).toBeDefined();
-      expect(Array.isArray(trip.members)).toBe(true);
+      const activity = response.body.find((t: any) => t.id === createdActivityId);
+      expect(activity).toBeDefined();
+      expect(activity.members).toBeDefined();
+      expect(Array.isArray(activity.members)).toBe(true);
     });
 
     // Note: Claim endpoint requires JWT authentication
     // This test would need to be updated with proper auth token
     it.skip('should claim virtual member (requires auth)', async () => {
       const response = await request(app.getHttpServer())
-        .post(`/trips/${createdTripId}/members/claim`)
+        .post(`/activities/${createdActivityId}/members/claim`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           virtualUserId: createdVirtualUserId,
@@ -137,9 +137,9 @@ describe('Virtual Members (e2e)', () => {
     });
 
     // Cleanup
-    it('should delete the trip', async () => {
+    it('should delete the activity', async () => {
       await request(app.getHttpServer())
-        .delete(`/trips/${createdTripId}`)
+        .delete(`/activities/${createdActivityId}`)
         .expect(200);
     });
 

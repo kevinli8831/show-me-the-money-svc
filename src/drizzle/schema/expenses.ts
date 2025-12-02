@@ -1,5 +1,5 @@
 import { pgTable, bigserial, bigint, varchar, decimal, timestamp, text, numeric } from 'drizzle-orm/pg-core';
-import { trips } from './trips';
+import { activities } from './activities';
 import { relations } from 'drizzle-orm';
 
 /**
@@ -13,11 +13,11 @@ export const expenses = pgTable('expenses', {
   id: bigserial('id', { mode: 'number' }).primaryKey(),
 
   /**
-   * Trip ID（必填，Foreign Key）
+   * Activity ID（必填，Foreign Key）
    * 
-   * onDelete: 'cascade' = 刪除 trip 會自動刪除所有 expenses
+   * onDelete: 'cascade' = 刪除 activity 會自動刪除所有 expenses
    */
-  tripId: bigint('trip_id', { mode: 'number' }).notNull().references(() => trips.id, { onDelete: 'cascade' }),
+  activityId: bigint('activity_id', { mode: 'number' }).notNull().references(() => activities.id, { onDelete: 'cascade' }),
 
   /**
    * 消費描述
@@ -40,14 +40,14 @@ export const expenses = pgTable('expenses', {
    * 對應 paidAmounts 和 shareAmounts 的順序
    */
   participantTokens: text('participant_tokens').array().notNull(),
-  
+
   /**
    * 實際付款金額列表 (Paid Amounts)
    * 
    * 對應 participantTokens
    */
   paidAmounts: numeric('paid_amounts', { precision: 12, scale: 2 }).array().notNull(),
-  
+
   /**
    * 應付金額列表 (Share Amounts)
    * 
@@ -66,8 +66,8 @@ export const expenses = pgTable('expenses', {
 
 
 export const expensesRelations = relations(expenses, ({ one }) => ({
-  trip: one(trips, {
-    fields: [expenses.tripId],
-    references: [trips.id],
+  activity: one(activities, {
+    fields: [expenses.activityId],
+    references: [activities.id],
   }),
 }));

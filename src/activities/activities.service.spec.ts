@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TripsService } from './trips.service';
+import { ActivitiesService } from './activities.service';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
 import { NotFoundException } from '@nestjs/common';
 
@@ -16,7 +16,7 @@ const mockDb = {
   set: jest.fn().mockReturnThis(),
   delete: jest.fn().mockReturnThis(),
   query: {
-    trips: {
+    activities: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
     },
@@ -28,8 +28,8 @@ const mockDb = {
 
 import { AuditService } from '../audit/audit.service';
 
-describe('TripsService', () => {
-  let service: TripsService;
+describe('ActivitiesService', () => {
+  let service: ActivitiesService;
   let db: any;
   let auditService: any;
 
@@ -40,7 +40,7 @@ describe('TripsService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        TripsService,
+        ActivitiesService,
         {
           provide: DrizzleAsyncProvider,
           useValue: mockDb,
@@ -52,7 +52,7 @@ describe('TripsService', () => {
       ],
     }).compile();
 
-    service = module.get<TripsService>(TripsService);
+    service = module.get<ActivitiesService>(ActivitiesService);
     db = module.get(DrizzleAsyncProvider);
     auditService = module.get<AuditService>(AuditService);
     jest.clearAllMocks();
@@ -63,45 +63,45 @@ describe('TripsService', () => {
   });
 
   describe('findByShareCode', () => {
-    it('should return a trip if found', async () => {
-      const mockTrip = { id: 1, name: 'Test Trip', shareCode: 'ABCD1234' };
-      mockDb.query.trips.findFirst.mockResolvedValue(mockTrip);
+    it('should return a activity if found', async () => {
+      const mockActivity = { id: 1, name: 'Test Activity', shareCode: 'ABCD1234' };
+      mockDb.query.activities.findFirst.mockResolvedValue(mockActivity);
 
       const result = await service.findByShareCode('ABCD1234');
-      expect(result).toEqual(mockTrip);
-      expect(mockDb.query.trips.findFirst).toHaveBeenCalledWith(
+      expect(result).toEqual(mockActivity);
+      expect(mockDb.query.activities.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.anything(), // eq(schema.trips.shareCode, 'ABCD1234')
+          where: expect.anything(), // eq(schema.activities.shareCode, 'ABCD1234')
         }),
       );
     });
 
-    it('should throw NotFoundException if trip not found', async () => {
-      mockDb.query.trips.findFirst.mockResolvedValue(null);
+    it('should throw NotFoundException if activity not found', async () => {
+      mockDb.query.activities.findFirst.mockResolvedValue(null);
 
       await expect(service.findByShareCode('INVALID')).rejects.toThrow(NotFoundException);
     });
 
     it('should include members if requested', async () => {
-      const mockTrip = { id: 1, name: 'Test Trip', shareCode: 'ABCD1234', tripMembers: [] };
-      mockDb.query.trips.findFirst.mockResolvedValue(mockTrip);
+      const mockActivity = { id: 1, name: 'Test Activity', shareCode: 'ABCD1234', activityMembers: [] };
+      mockDb.query.activities.findFirst.mockResolvedValue(mockActivity);
 
       await service.findByShareCode('ABCD1234', ['members']);
-      expect(mockDb.query.trips.findFirst).toHaveBeenCalledWith(
+      expect(mockDb.query.activities.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           with: expect.objectContaining({
-            tripMembers: expect.anything(),
+            activityMembers: expect.anything(),
           }),
         }),
       );
     });
 
     it('should include expenses if requested', async () => {
-      const mockTrip = { id: 1, name: 'Test Trip', shareCode: 'ABCD1234', expenses: [] };
-      mockDb.query.trips.findFirst.mockResolvedValue(mockTrip);
+      const mockActivity = { id: 1, name: 'Test Activity', shareCode: 'ABCD1234', expenses: [] };
+      mockDb.query.activities.findFirst.mockResolvedValue(mockActivity);
 
       await service.findByShareCode('ABCD1234', ['expenses']);
-      expect(mockDb.query.trips.findFirst).toHaveBeenCalledWith(
+      expect(mockDb.query.activities.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           with: expect.objectContaining({
             expenses: expect.anything(),

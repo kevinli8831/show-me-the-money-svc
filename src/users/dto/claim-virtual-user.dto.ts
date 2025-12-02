@@ -3,7 +3,7 @@ import { IsInt } from 'class-validator';
 /**
  * ClaimVirtualUserDto - 認領虛擬成員嘅 DTO
  * 
- * 用於 POST /trips/:tripId/members/claim
+ * 用於 POST /activities/:activityId/members/claim
  */
 export class ClaimVirtualUserDto {
   /**

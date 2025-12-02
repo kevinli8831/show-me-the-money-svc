@@ -4,7 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { DrizzleModule } from './drizzle/drizzle.module';
 import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
-import { TripsModule } from './trips/trips.module';
+import { ActivitiesModule } from './activities/activities.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ExpenseCategoriesModule } from './expense-categories/expense-categories.module';
@@ -19,7 +19,7 @@ import 'winston-daily-rotate-file';
  * 用途：
  * - 組織同管理所有 modules
  * - 設定全局配置（例如環境變數）
- * - Import 所有 feature modules (Users, Trips, Expenses, Payments)
+ * - Import 所有 feature modules (Users, Activities, Expenses, Payments)
  */
 @Module({
   imports: [
@@ -125,12 +125,12 @@ import 'winston-daily-rotate-file';
      * 
      * 每個 module 負責一個 feature：
      * - UsersModule: 管理 users (CRUD)
-     * - TripsModule: 管理 trips 同 trip members (CRUD + member management)
+     * - ActivitiesModule: 管理 activities 同 activity members (CRUD + member management)
      * - ExpensesModule: 管理 expenses (CRUD)
      * - PaymentsModule: 管理 payments (CRUD)
      */
     UsersModule,
-    TripsModule,
+    ActivitiesModule,
     ExpensesModule,
     ExpenseCategoriesModule,
     PaymentsModule,

@@ -23,7 +23,7 @@ export class UsersService {
    */
   constructor(
     @Inject(DrizzleAsyncProvider) private readonly db: NeonHttpDatabase<typeof schema>,
-  ) {}
+  ) { }
 
   /**
    * 創建新 User
@@ -70,16 +70,16 @@ export class UsersService {
   }
 
   /**
-   * 搵某個 Trip 入面嘅所有虛擬成員
+   * 搵某個 Activity 入面嘅所有虛擬成員
    */
-  async findVirtualUsersByTrip(tripId: number) {
+  async findVirtualUsersByActivity(activityId: number) {
     const members = await this.db
       .select({ user: schema.users })
-      .from(schema.tripMembers)
-      .innerJoin(schema.users, eq(schema.users.id, schema.tripMembers.userId))
+      .from(schema.activityMembers)
+      .innerJoin(schema.users, eq(schema.users.id, schema.activityMembers.userId))
       .where(
         and(
-          eq(schema.tripMembers.tripId, tripId),
+          eq(schema.activityMembers.activityId, activityId),
           eq(schema.users.userType, 'virtual'),
         ),
       );
@@ -90,79 +90,79 @@ export class UsersService {
    * 認領虛擬成員
    * 
    * 當真人註冊後，可以 claim 之前嘅虛擬成員
-   * 1. 將所有 trip_members 由 virtual user 轉去 real user
+   * 1. 將所有 activity_members 由 virtual user 轉去 real user
    * 2. 將所有 expense_splits 由 virtual user 轉去 real user
    * 3. 將所有 expense_payers 由 virtual user 轉去 real user
    * 4. 標記 virtual user 已被 claim
    */
-  async claimVirtualUser(virtualUserId: number, realUserId: number, tripId: number) {
-    // 1. Update trip_members
+  async claimVirtualUser(virtualUserId: number, realUserId: number, activityId: number) {
+    // 1. Update activity_members
     await this.db
-      .update(schema.tripMembers)
+      .update(schema.activityMembers)
       .set({ userId: realUserId })
       .where(
         and(
-          eq(schema.tripMembers.userId, virtualUserId),
-          eq(schema.tripMembers.tripId, tripId),
+          eq(schema.activityMembers.userId, virtualUserId),
+          eq(schema.activityMembers.activityId, activityId),
         ),
       );
 
     // 2. Update expenses (createdByToken: Virtual -> Real)
     // We need to find the Virtual User's memberToken first?
     // Wait, Virtual User doesn't have a memberToken in users table.
-    // MemberToken is in trip_members table.
+    // MemberToken is in activity_members table.
     // But claimVirtualUser takes virtualUserId.
-    // So we need to find the memberToken for this virtualUserId in this trip.
-    
+    // So we need to find the memberToken for this virtualUserId in this activity.
+
     const [virtualMember] = await this.db
       .select()
-      .from(schema.tripMembers)
+      .from(schema.activityMembers)
       .where(
         and(
-          eq(schema.tripMembers.tripId, tripId),
-          eq(schema.tripMembers.userId, virtualUserId),
+          eq(schema.activityMembers.activityId, activityId),
+          eq(schema.activityMembers.userId, virtualUserId),
         ),
       );
-      
+
     // If virtual member exists, we need to update expenses that reference its token.
-    // But wait, step 1 already updated trip_members userId to realUserId!
+    // But wait, step 1 already updated activity_members userId to realUserId!
     // So if we query now, we might not find it if we query by virtualUserId?
-    // Step 1: update trip_members set userId = realUserId where userId = virtualUserId
+    // Step 1: update activity_members set userId = realUserId where userId = virtualUserId
     // So after step 1, the member record has userId = realUserId.
     // BUT the memberToken stays the same!
     // And expenses reference memberToken.
     // So expenses are ALREADY pointing to the correct member record (which is now owned by realUserId).
     // So... we don't need to update expenses at all?
-    
+
     // Let's verify:
-    // 1. Virtual User (id=10) created. Trip Member (token=ABC, userId=10).
+    // 1. Virtual User (id=10) created. Activity Member (token=ABC, userId=10).
     // 2. Expense created with participantTokens=[ABC].
-    // 3. Claim: Update Trip Member set userId=20 where userId=10.
-    // 4. Trip Member is now (token=ABC, userId=20).
+    // 3. Claim: Update Activity Member set userId=20 where userId=10.
+    // 4. Activity Member is now (token=ABC, userId=20).
     // 5. Expense still has participantTokens=[ABC].
-    // 6. When fetching expense, we look up member ABC -> finds Trip Member (userId=20) -> finds User 20.
+    // 6. When fetching expense, we look up member ABC -> finds Activity Member (userId=20) -> finds User 20.
     // Correct!
-    
-    // So for claimVirtualUser, we ONLY need to update trip_members.
+
+    // So for claimVirtualUser, we ONLY need to update activity_members.
     // We DO NOT need to update expenses because expenses use memberToken, which doesn't change.
     // The only thing that changes is the ownership of that memberToken.
-    
+
     // However, previously I was updating expense_payers/splits because they referenced userId directly.
     // Now expenses reference memberToken.
     // So my previous logic for claimVirtualUser was updating userId in payers/splits.
     // Now that payers/splits are gone, and expenses use tokens, we are good!
-    
+
     // BUT, what about createdByToken?
     // Same logic. createdByToken = ABC. Member ABC is now owned by Real User.
     // So it automatically points to Real User.
-    
-    // So... claimVirtualUser just needs to update trip_members and users table.
+
+    // So... claimVirtualUser just needs to update activity_members and users table.
     // That's it!
-    
+
     // Wait, I should double check if I need to do anything else.
     // The previous implementation of claimVirtualUser updated expense_splits and expense_payers.
     // Since those tables are deleted, I should remove that code.
-    
+
     // So I just need to remove the code that updates expense_splits and expense_payers.
 
 
@@ -179,13 +179,13 @@ export class UsersService {
    * 認領訪客成員 (Guest -> Real User)
    * 
    * 當 Guest User 登入後，將其 Guest 身份合併到 Real User
-   * 1. Update trip_members (userId -> Real User)
+   * 1. Update activity_members (userId -> Real User)
    * 2. Update expenses (createdByToken: Guest -> Real)
    * 3. Update expenses (participantTokens: Guest -> Real)
    * 4. Update payments (fromUserId/toUserId -> Real User)
    * 5. Delete Guest User
    */
-  async claimGuestMember(guestUserId: number, realUserId: number, tripId: number) {
+  async claimGuestMember(guestUserId: number, realUserId: number, activityId: number) {
     if (guestUserId === realUserId) {
       return { success: true, message: 'Same user, no need to claim' };
     }
@@ -193,11 +193,11 @@ export class UsersService {
     // Get Guest Member Token
     const [guestMember] = await this.db
       .select()
-      .from(schema.tripMembers)
+      .from(schema.activityMembers)
       .where(
         and(
-          eq(schema.tripMembers.tripId, tripId),
-          eq(schema.tripMembers.userId, guestUserId),
+          eq(schema.activityMembers.activityId, activityId),
+          eq(schema.activityMembers.userId, guestUserId),
         ),
       );
 
@@ -208,44 +208,44 @@ export class UsersService {
     // Get Real Member Token (if exists)
     const [realMember] = await this.db
       .select()
-      .from(schema.tripMembers)
+      .from(schema.activityMembers)
       .where(
         and(
-          eq(schema.tripMembers.tripId, tripId),
-          eq(schema.tripMembers.userId, realUserId),
+          eq(schema.activityMembers.activityId, activityId),
+          eq(schema.activityMembers.userId, realUserId),
         ),
       );
 
     if (realMember) {
-      // Real User is already in the trip.
+      // Real User is already in the activity.
       // We need to merge Guest's data into Real User.
       // Since expenses use memberToken, we need to replace GuestToken with RealToken in expenses.
-      
-      await this.mergeUserData(guestMember.memberToken, realMember.memberToken, tripId);
-      
+
+      await this.mergeUserData(guestMember.memberToken, realMember.memberToken, activityId);
+
       // Delete Guest Member
       await this.db
-        .delete(schema.tripMembers)
+        .delete(schema.activityMembers)
         .where(
           and(
-            eq(schema.tripMembers.tripId, tripId),
-            eq(schema.tripMembers.userId, guestUserId),
+            eq(schema.activityMembers.activityId, activityId),
+            eq(schema.activityMembers.userId, guestUserId),
           ),
         );
     } else {
-      // Real User is NOT in the trip.
+      // Real User is NOT in the activity.
       // Just update Guest Member to point to Real User.
       // The memberToken stays the same, so expenses don't need update!
       // Wait, user said "登入後傳一次 memberToken 給後端 → 把 isGuest 改 false + 填 userId".
-      // So in this case, we just update trip_members.
-      
+      // So in this case, we just update activity_members.
+
       await this.db
-        .update(schema.tripMembers)
+        .update(schema.activityMembers)
         .set({ userId: realUserId, isGuest: false })
         .where(
           and(
-            eq(schema.tripMembers.tripId, tripId),
-            eq(schema.tripMembers.userId, guestUserId),
+            eq(schema.activityMembers.activityId, activityId),
+            eq(schema.activityMembers.userId, guestUserId),
           ),
         );
     }
@@ -253,9 +253,9 @@ export class UsersService {
     // Delete Guest User (if no other dependencies)
     const remainingMembers = await this.db
       .select()
-      .from(schema.tripMembers)
-      .where(eq(schema.tripMembers.userId, guestUserId));
-      
+      .from(schema.activityMembers)
+      .where(eq(schema.activityMembers.userId, guestUserId));
+
     if (remainingMembers.length === 0) {
       await this.db.delete(schema.users).where(eq(schema.users.id, guestUserId));
     }
@@ -263,14 +263,14 @@ export class UsersService {
     return { success: true };
   }
 
-  private async mergeUserData(fromToken: string, toToken: string, tripId: number) {
+  private async mergeUserData(fromToken: string, toToken: string, activityId: number) {
     // 1. Update expenses createdByToken
     await this.db
       .update(schema.expenses)
       .set({ createdByToken: toToken })
       .where(
         and(
-          eq(schema.expenses.tripId, tripId),
+          eq(schema.expenses.activityId, activityId),
           eq(schema.expenses.createdByToken, fromToken),
         ),
       );
@@ -279,11 +279,11 @@ export class UsersService {
     // This is tricky with arrays. We need to replace fromToken with toToken in the array.
     // Postgres array_replace: array_replace(participant_tokens, 'fromToken', 'toToken')
     // Drizzle sql operator can be used.
-    
+
     await this.db.execute(sql`
       UPDATE expenses
       SET participant_tokens = array_replace(participant_tokens, ${fromToken}, ${toToken})
-      WHERE trip_id = ${tripId} AND ${fromToken} = ANY(participant_tokens)
+      WHERE activity_id = ${activityId} AND ${fromToken} = ANY(participant_tokens)
     `);
 
     // Note: We are NOT merging amounts if both tokens existed in the same expense.

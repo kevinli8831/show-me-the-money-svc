@@ -7,11 +7,11 @@
  */
 export class CreatePaymentDto {
   /**
-   * Trip ID（必填）
+   * Activity ID（必填）
    * 
-   * 指定呢個 payment 屬於邊個 trip
+   * 指定呢個 payment 屬於邊個 activity
    */
-  tripId: number;
+  activityId: number;
 
   /**
    * 付款人 User ID（必填）

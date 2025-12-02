@@ -2,42 +2,42 @@ import { pgTable, bigserial, varchar, text, date, timestamp, bigint, uuid } from
 import { users } from './users';
 
 /**
- * Trips Table Schema - 旅行資料表
+ * Activities Table Schema - 活動資料表
  * 
  * 用途：
- * - 儲存所有 trip 嘅基本資料
- * - 一個 trip 可以有多個 members, expenses, payments
+ * - 儲存所有 activity 嘅基本資料
+ * - 一個 activity 可以有多個 members, expenses, payments
  * 
  * 關聯：
- * - trip_members.tripId -> trips.id (一個 trip 有多個 members)
- * - expenses.tripId -> trips.id (一個 trip 有多個 expenses)
- * - payments.tripId -> trips.id (一個 trip 有多個 payments)
+ * - activity_members.activityId -> activities.id (一個 activity 有多個 members)
+ * - expenses.activityId -> activities.id (一個 activity 有多個 expenses)
+ * - payments.activityId -> activities.id (一個 activity 有多個 payments)
  */
-export const trips = pgTable('trips', {
+export const activities = pgTable('activities', {
   /**
    * Primary Key - 自動遞增嘅 ID
    */
   id: bigserial('id', { mode: 'number' }).primaryKey(),
 
   /**
-   * Trip 名稱（必填）
+   * Activity 名稱（必填）
    * 
    * 例如: "重廈旅行", "日本之旅"
    */
   name: varchar('name', { length: 100 }).notNull(),
 
   /**
-   * Trip Share Code（必填，唯一）
+   * Activity Share Code（必填，唯一）
    * 
    * 例如: "ABCD1234"
    */
   shareCode: varchar('share_code', { length: 8 }).notNull().unique(),
 
   /**
-   * Trip 描述（可選）
+   * Activity 描述（可選）
    * 
    * text = 無長度限制
-   * 用於儲存詳細嘅 trip 描述
+   * 用於儲存詳細嘅 activity 描述
    */
   description: text('description'),
 
@@ -64,10 +64,10 @@ export const trips = pgTable('trips', {
    * references(() => users.id) = Foreign Key 指向 users.id
    * 
    * 注意：
-   * - 如果有 creatorUserId，TripsService.create 會自動將佢加入做 trip member (Admin)
+   * - 如果有 creatorUserId，ActivitiesService.create 會自動將佢加入做 activity member (Admin)
    * - 冇 onDelete，所以如果 delete user，呢個 field 會變 NULL
    */
-  creatorMemberToken: uuid('creator_member_token').defaultRandom().notNull().unique(),
+  creatorMemberToken: varchar('creator_member_token', { length: 20 }).notNull().unique(),
 
   creatorUserId: bigint('creator_user_id', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),  // 創建者
   /**
@@ -77,27 +77,27 @@ export const trips = pgTable('trips', {
 });
 
 /**
- * Trips Relations - 定義 trips table 同其他 tables 嘅關係
+ * Activities Relations - 定義 activities table 同其他 tables 嘅關係
  * 
- * 呢啲 relations 係比 Drizzle Query API 用嘅（例如 db.query.trips.findMany({ with: { ... } })）
+ * 呢啲 relations 係比 Drizzle Query API 用嘅（例如 db.query.activities.findMany({ with: { ... } })）
  * 唔係 database constraints，只係 TypeScript type 同 query builder 用
  */
 import { relations } from 'drizzle-orm';
-import { tripMembers } from './trip_members';
+import { activityMembers } from './activity_members';
 import { expenses } from './expenses';
 
-export const tripsRelations = relations(trips, ({ many, one }) => ({
+export const activitiesRelations = relations(activities, ({ many, one }) => ({
   /**
-   * 一個 trip 有多個 trip members
+   * 一個 activity 有多個 activity members
    * 
    * 用法：
-   * db.query.trips.findMany({ with: { tripMembers: true } })
+   * db.query.activities.findMany({ with: { activityMembers: true } })
    */
-  creator: one(users, {  // 從 trip 拉創建者
-    fields: [trips.creatorUserId],
+  creator: one(users, {  // 從 activity 拉創建者
+    fields: [activities.creatorUserId],
     references: [users.id],
   }),
-  tripMembers: many(tripMembers),
+  activityMembers: many(activityMembers),
   expenses: many(expenses),
 }));
 

@@ -5,14 +5,14 @@
  * 
  * 用途：
  * - 定義 POST /expenses 嘅 request body 結構
- * - 記錄 trip 入面嘅消費
+ * - 記錄 activity 入面嘅消費
  * - 同時 create expense payers 同 splits
  */
 export class CreateExpenseDto {
   /**
-   * Trip ID（必填）
+   * Activity ID（必填）
    */
-  tripId: number;
+  activityId: number;
 
   /**
    * 消費描述（必填）

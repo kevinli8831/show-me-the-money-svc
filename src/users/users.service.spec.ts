@@ -68,8 +68,8 @@ describe('UsersService - Virtual Members', () => {
     });
   });
 
-  describe('findVirtualUsersByTrip', () => {
-    it('should find virtual users in a trip', async () => {
+  describe('findVirtualUsersByActivity', () => {
+    it('should find virtual users in a activity', async () => {
       const mockMembers = [
         { user: { id: 100, name: 'Kevin', userType: 'virtual' } },
         { user: { id: 101, name: 'Mary', userType: 'virtual' } },
@@ -77,7 +77,7 @@ describe('UsersService - Virtual Members', () => {
 
       mockDb.where.mockResolvedValueOnce(mockMembers);
 
-      const result = await service.findVirtualUsersByTrip(1);
+      const result = await service.findVirtualUsersByActivity(1);
 
       expect(result).toHaveLength(2);
       expect(result[0].name).toBe('Kevin');

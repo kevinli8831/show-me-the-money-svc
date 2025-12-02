@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TripsController } from './trips.controller';
-import { TripsService } from './trips.service';
+import { ActivitiesController } from './activities.controller';
+import { ActivitiesService } from './activities.service';
 import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { OptionalJwtGuard } from '../auth/guards/auth.guard';
 
-const mockTripsService = {
+const mockActivitiesService = {
   create: jest.fn(),
   findAll: jest.fn(),
   findOne: jest.fn(),
@@ -23,14 +23,14 @@ const mockUsersService = {
   claimGuestMember: jest.fn(),
 };
 
-describe('TripsController', () => {
-  let controller: TripsController;
+describe('ActivitiesController', () => {
+  let controller: ActivitiesController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [TripsController],
+      controllers: [ActivitiesController],
       providers: [
-        { provide: TripsService, useValue: mockTripsService },
+        { provide: ActivitiesService, useValue: mockActivitiesService },
         { provide: UsersService, useValue: mockUsersService },
       ],
     })
@@ -42,7 +42,7 @@ describe('TripsController', () => {
       .useValue({ canActivate: () => true })
       .compile();
 
-    controller = module.get<TripsController>(TripsController);
+    controller = module.get<ActivitiesController>(ActivitiesController);
     jest.clearAllMocks();
   });
 
@@ -51,21 +51,21 @@ describe('TripsController', () => {
   });
 
   describe('findByShareCode', () => {
-    it('should return a trip', async () => {
-      const mockTrip = { id: 1, name: 'Test Trip', shareCode: 'ABCD1234' };
-      mockTripsService.findByShareCode.mockResolvedValue(mockTrip);
+    it('should return a activity', async () => {
+      const mockActivity = { id: 1, name: 'Test Activity', shareCode: 'ABCD1234' };
+      mockActivitiesService.findByShareCode.mockResolvedValue(mockActivity);
 
       const result = await controller.findByShareCode('ABCD1234');
-      expect(result).toEqual(mockTrip);
-      expect(mockTripsService.findByShareCode).toHaveBeenCalledWith('ABCD1234', []);
+      expect(result).toEqual(mockActivity);
+      expect(mockActivitiesService.findByShareCode).toHaveBeenCalledWith('ABCD1234', []);
     });
 
     it('should pass include options', async () => {
-      const mockTrip = { id: 1, name: 'Test Trip', shareCode: 'ABCD1234' };
-      mockTripsService.findByShareCode.mockResolvedValue(mockTrip);
+      const mockActivity = { id: 1, name: 'Test Activity', shareCode: 'ABCD1234' };
+      mockActivitiesService.findByShareCode.mockResolvedValue(mockActivity);
 
       await controller.findByShareCode('ABCD1234', 'members,expenses');
-      expect(mockTripsService.findByShareCode).toHaveBeenCalledWith('ABCD1234', ['members', 'expenses']);
+      expect(mockActivitiesService.findByShareCode).toHaveBeenCalledWith('ABCD1234', ['members', 'expenses']);
     });
   });
 });

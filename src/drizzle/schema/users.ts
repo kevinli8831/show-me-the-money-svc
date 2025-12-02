@@ -11,8 +11,8 @@ export const userTypeEnum = pgEnum('user_type_enum', ['virtual', 'email', 'googl
  * - 支援 Virtual Members (虛擬成員)
  * 
  * 關聯：
- * - trips.creatorUserId -> users.id (一個 user 可以 create 多個 trips)
- * - trip_members.userId -> users.id (一個 user 可以係多個 trips 嘅 member)
+ * - activities.creatorUserId -> users.id (一個 user 可以 create 多個 activities)
+ * - activity_members.userId -> users.id (一個 user 可以係多個 activities 嘅 member)
  * - expenses.createdBy -> users.id (一個 user 可以 create 多個 expenses)
  * - expense_payers.userId -> users.id
  * - expense_splits.userId -> users.id
@@ -124,12 +124,12 @@ export const users = pgTable('users', {
  * Users Relations - 定義 users table 同其他 tables 嘅關係
  */
 import { relations } from 'drizzle-orm';
-import { tripMembers } from './trip_members';
+import { activityMembers } from './activity_members';
 
 export const usersRelations = relations(users, ({ many }) => ({
   /**
-   * 一個 user 可以係多個 trips 嘅 member
+   * 一個 user 可以係多個 activities 嘅 member
    */
-  tripMembers: many(tripMembers),
+  activityMembers: many(activityMembers),
 }));
 

@@ -24,7 +24,7 @@ export class ExpensesController {
    * HTTP: POST /expenses
    * Request Body 例子:
    * {
-   *   "tripId": 1,
+   *   "activityId": 1,
    *   "title": "晚餐",
    *   "amount": "300.50",
    *   "currency": "HKD",

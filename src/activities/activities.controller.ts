@@ -1,36 +1,37 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Req, UseGuards, Headers } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { TripsService } from './trips.service';
-import { CreateTripDto } from './dto/create-trip.dto';
-import { UpdateTripDto } from './dto/update-trip.dto';
+import { ActivitiesService } from './activities.service';
+import { CreateActivityDto } from './dto/create-activity.dto';
+import { UpdateActivityDto } from './dto/update-activity.dto';
 import { ClaimVirtualUserDto } from '../users/dto/claim-virtual-user.dto';
 import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { OptionalJwtGuard } from '../auth/guards/auth.guard';
+import { CreateActivityMembersDto } from 'src/activitiesMembers/dto/create-activityMembers.dto';
 
 /**
- * TripsController - 處理所有 /trips 開頭嘅 HTTP requests
+ * ActivitiesController - 處理所有 /activities 開頭嘅 HTTP requests
  * 
  * API Endpoints:
- * - POST   /trips                    創建新 trip
- * - GET    /trips                    獲取所有 trips
- * - GET    /trips/:id                獲取單個 trip
- * - PATCH  /trips/:id                更新 trip
- * - DELETE /trips/:id                刪除 trip
- * - POST   /trips/:id/members        加人入 trip
- * - DELETE /trips/:id/members/:userId 踢人出 trip
+ * - POST   /activities                    創建新 activity
+ * - GET    /activities                    獲取所有 activities
+ * - GET    /activities/:id                獲取單個 activity
+ * - PATCH  /activities/:id                更新 activity
+ * - DELETE /activities/:id                刪除 activity
+ * - POST   /activities/:id/members        加人入 activity
+ * - DELETE /activities/:id/members/:userId 踢人出 activity
  */
-@ApiTags('trips')
-@Controller('trips')
-export class TripsController {
+@ApiTags('activities')
+@Controller('activities')
+export class ActivitiesController {
   constructor(
-    private readonly tripsService: TripsService,
+    private readonly activitiesService: ActivitiesService,
     private readonly usersService: UsersService,
   ) { }
 
   /**
-   * 創建新 Trip
+   * 創建新 Activity
    * 
    * Request Body 例子:
    * {
@@ -41,98 +42,98 @@ export class TripsController {
    *   "creatorUserId": 1
    * }
    * 
-   * 注意：creatorUserId 會自動加入做 trip member (Admin)
+   * 注意：creatorUserId 會自動加入做 activity member (Admin)
    */
   @Post()
   @UseGuards(OptionalJwtGuard)
-  async create(@Body() createTripDto: CreateTripDto, @Req() req: Request & { user?: any }) {
+  async create(@Body() createActivityDto: CreateActivityDto, @Req() req: Request & { user?: any }) {
     // If user is logged in (via JWT), use their ID
     console.log(req.user)
-    return this.tripsService.create(createTripDto);
+    return this.activitiesService.create(createActivityDto);
   }
 
   /**
-   * 獲取所有 Trips
+   * 獲取所有 Activities
    * 
    * Query Parameters:
    * - include: 指定要 include 咩 nested data (e.g. "members,expenses")
    * 
    * 例子:
-   * GET /trips                        // 只要基本資料
-   * GET /trips?include=members        // 要埋 members
-   * GET /trips?include=members,expenses  // 要 members 同 expenses
+   * GET /activities                        // 只要基本資料
+   * GET /activities?include=members        // 要埋 members
+   * GET /activities?include=members,expenses  // 要 members 同 expenses
    */
   @Get()
-  @ApiOperation({ summary: '獲取所有 Trips', description: '支援 ?include=members 查詢參數' })
+  @ApiOperation({ summary: '獲取所有 Activities', description: '支援 ?include=members 查詢參數' })
   @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members', example: 'members' })
-  @ApiQuery({ name: 'memberToken', required: false, description: 'User ID for filtering trips', example: '1' })
-  @ApiResponse({ status: 200, description: 'Successfully retrieved trips' })
+  @ApiQuery({ name: 'memberToken', required: false, description: 'User ID for filtering activities', example: '1' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved activities' })
   async findAll(@Query('include') include?: string, @Query('memberToken') memberToken?: string) {
     const includeOptions = include?.split(',') || [];
-    const trips = await this.tripsService.findAll(includeOptions, memberToken);
-    return trips.map(trip => this.mapTripResponse(trip));
+    const activities = await this.activitiesService.findAll(includeOptions, memberToken);
+    return activities.map(activity => this.mapActivityResponse(activity));
   }
 
   /**
-   * 根據 Share Code 獲取單個 Trip
+   * 根據 Share Code 獲取單個 Activity
    * 
-   * GET /trips/share/:shareCode
+   * GET /activities/share/:shareCode
    */
   @Get('share/:shareCode')
-  @ApiOperation({ summary: '根據 Share Code 獲取 Trip', description: '支援 ?include=members,expenses' })
+  @ApiOperation({ summary: '根據 Share Code 獲取 Activity', description: '支援 ?include=members,expenses' })
   @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members,expenses', example: 'members,expenses' })
-  @ApiResponse({ status: 200, description: 'Successfully retrieved trip' })
-  @ApiResponse({ status: 404, description: 'Trip not found' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved activity' })
+  @ApiResponse({ status: 404, description: 'Activity not found' })
   async findByShareCode(@Param('shareCode') shareCode: string, @Query('include') include?: string) {
     const includeOptions = include?.split(',') || [];
-    const trip = await this.tripsService.findByShareCode(shareCode, includeOptions);
-    return this.mapTripResponse(trip);
+    const activity = await this.activitiesService.findByShareCode(shareCode, includeOptions);
+    return this.mapActivityResponse(activity);
   }
 
   /**
-   * 獲取單個 Trip
+   * 獲取單個 Activity
    * 
    * Query Parameters:
    * - include: 指定要 include 咩 nested data
    * 
    * 例子:
-   * GET /trips/1                        // 只要基本資料
-   * GET /trips/1?include=members        // 要埋 members
-   * GET /trips/1?include=members,expenses,payments  // 要多樣野
+   * GET /activities/1                        // 只要基本資料
+   * GET /activities/1?include=members        // 要埋 members
+   * GET /activities/1?include=members,expenses,payments  // 要多樣野
    */
   @Get(':id')
-  @ApiOperation({ summary: '獲取單個 Trip', description: '支援 ?include=members 查詢參數' })
+  @ApiOperation({ summary: '獲取單個 Activity', description: '支援 ?include=members 查詢參數' })
   @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members', example: 'members' })
-  @ApiResponse({ status: 200, description: 'Successfully retrieved trip' })
-  @ApiResponse({ status: 404, description: 'Trip not found' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved activity' })
+  @ApiResponse({ status: 404, description: 'Activity not found' })
   async findOne(@Param('id') id: string, @Query('include') include?: string) {
     const includeOptions = include?.split(',') || [];
-    const trip = await this.tripsService.findOne(+id, includeOptions);
-    return this.mapTripResponse(trip);
+    const activity = await this.activitiesService.findOne(+id, includeOptions);
+    return this.mapActivityResponse(activity);
   }
 
   /**
-   * 更新 Trip
+   * 更新 Activity
    * 
-   * 例如: PATCH /trips/1
+   * 例如: PATCH /activities/1
    * Body: { "name": "新名稱" }
    */
   @Patch(':id')
   @UseGuards(OptionalJwtGuard)
   update(
     @Param('id') id: string,
-    @Body() updateTripDto: UpdateTripDto,
+    @Body() updateActivityDto: UpdateActivityDto,
     @Headers('x-member-token') memberToken: string,
     @Req() req,
   ) {
-    return this.tripsService.update(+id, memberToken, updateTripDto, req.user?.userId);
+    return this.activitiesService.update(+id, memberToken, updateActivityDto, req.user?.userId);
   }
 
   /**
-   * 刪除 Trip
+   * 刪除 Activity
    * 
-   * 例如: DELETE /trips/1
-   * 注意：會自動刪除所有相關嘅 trip members (cascade delete)
+   * 例如: DELETE /activities/1
+   * 注意：會自動刪除所有相關嘅 activity members (cascade delete)
    */
   @Delete(':id')
   @UseGuards(OptionalJwtGuard)
@@ -141,44 +142,44 @@ export class TripsController {
     @Headers('x-member-token') memberToken: string,
     @Req() req,
   ) {
-    return this.tripsService.remove(+id, memberToken, req.user?.userId);
+    return this.activitiesService.remove(+id, memberToken, req.user?.userId);
   }
 
   /**
-   * 加人入 Trip
+   * 加人入 Activity
    * 
-   * 例如: POST /trips/1/members
+   * 例如: POST /activities/1/members
    * Body: { "userId": 2 }
    * 
-   * 用途：比其他 user join 個 trip
+   * 用途：比其他 user join 個 activity
    */
   @Post(':id/members')
-  addMember(@Param('id') id: string, @Body('userId') userId: number) {
-    return this.tripsService.addMember(+id, userId);
+  addMember(@Param('id') id: number, @Body() createActivityMembersDto: CreateActivityMembersDto) {
+    return this.activitiesService.addMember(+id, createActivityMembersDto);
   }
 
   /**
-   * 踢人出 Trip
+   * 踢人出 Activity
    * 
-   * 例如: DELETE /trips/1/members/2
+   * 例如: DELETE /activities/1/members/2
    * 
-   * 用途：將 user 從 trip 移除
+   * 用途：將 user 從 activity 移除
    */
   @Delete(':id/members/:userId')
   removeMember(@Param('id') id: string, @Param('userId') userId: string) {
-    return this.tripsService.removeMember(+id, +userId);
+    return this.activitiesService.removeMember(+id, +userId);
   }
 
   /**
-   * Join Trip (Guest)
+   * Join Activity (Guest)
    * 
-   * Link: yourapp.com/t/ABCD1234 -> Frontend calls POST /trips/:id/join
+   * Link: yourapp.com/t/ABCD1234 -> Frontend calls POST /activities/:id/join
    */
   @Post(':id/join')
-  @ApiOperation({ summary: '加入 Trip (Guest)', description: '任何人點 Link 直接入團，生成 memberToken' })
-  @ApiResponse({ status: 201, description: 'Successfully joined trip', schema: { example: { trip: {}, memberToken: 'uuid' } } })
+  @ApiOperation({ summary: '加入 Activity (Guest)', description: '任何人點 Link 直接入團，生成 memberToken' })
+  @ApiResponse({ status: 201, description: 'Successfully joined activity', schema: { example: { activity: {}, memberToken: 'uuid' } } })
   join(@Param('id') id: string, @Body('userName') userName?: string) {
-    return this.tripsService.join(+id, userName);
+    return this.activitiesService.join(+id, userName);
   }
 
   /**
@@ -187,7 +188,7 @@ export class TripsController {
    * 當真人註冊後，可以 claim 之前嘅虛擬成員
    * 所有相關嘅 expenses 會自動轉去真人
    * 
-   * 例子: POST /trips/1/members/claim
+   * 例子: POST /activities/1/members/claim
    * Body: { "virtualUserId": 100 }
    */
   @Post(':id/members/claim')
@@ -235,11 +236,11 @@ export class TripsController {
       +id,
     );
   }
-  private mapTripResponse(trip: any) {
-    if (trip.tripMembers) {
-      trip.members = trip.tripMembers;
-      delete trip.tripMembers;
+  private mapActivityResponse(activity: any) {
+    if (activity.activityMembers) {
+      activity.members = activity.activityMembers;
+      delete activity.activityMembers;
     }
-    return trip;
+    return activity;
   }
 }

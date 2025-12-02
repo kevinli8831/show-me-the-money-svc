@@ -140,8 +140,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.trips": {
-      "name": "trips",
+    "public.activites": {
+      "name": "activites",
       "schema": "",
       "columns": {
         "id": {
@@ -192,7 +192,7 @@
       "foreignKeys": {
         "trips_creator_user_id_users_id_fk": {
           "name": "trips_creator_user_id_users_id_fk",
-          "tableFrom": "trips",
+          "tableFrom": "activites",
           "tableTo": "users",
           "columnsFrom": [
             "creator_user_id"
@@ -252,7 +252,7 @@
         "trip_members_trip_id_trips_id_fk": {
           "name": "trip_members_trip_id_trips_id_fk",
           "tableFrom": "trip_members",
-          "tableTo": "trips",
+          "tableTo": "activites",
           "columnsFrom": [
             "trip_id"
           ],
@@ -361,7 +361,7 @@
         "expenses_trip_id_trips_id_fk": {
           "name": "expenses_trip_id_trips_id_fk",
           "tableFrom": "expenses",
-          "tableTo": "trips",
+          "tableTo": "activites",
           "columnsFrom": [
             "trip_id"
           ],
@@ -623,7 +623,7 @@
         "payments_trip_id_trips_id_fk": {
           "name": "payments_trip_id_trips_id_fk",
           "tableFrom": "payments",
-          "tableTo": "trips",
+          "tableTo": "activites",
           "columnsFrom": [
             "trip_id"
           ],

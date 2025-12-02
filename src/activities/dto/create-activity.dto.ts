@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import { IsDateString, IsOptional, IsString } from 'class-validator';
 
 /**
- * CreateTripDto - 創建 Trip 嘅 Data Transfer Object
+ * CreateActivityDto - 創建 Activity 嘅 Data Transfer Object
  * 
  * 用途：
  * 1. 定義 API request body 嘅結構
@@ -15,9 +15,9 @@ import { IsDateString, IsOptional, IsString } from 'class-validator';
  * - @Type(() => Number): 將 JSON number 轉做 TypeScript number
  * - @ApiProperty: 設定 Swagger UI 顯示方式
  */
-export class CreateTripDto {
+export class CreateActivityDto {
   /**
-   * Trip 名稱
+   * Activity 名稱
    * 例如: "重廈旅行"
    */
   @ApiProperty({ type: String, required: true })
@@ -25,7 +25,7 @@ export class CreateTripDto {
   name: string;
 
   /**
-   * Trip 描述（可選）
+   * Activity 描述（可選）
    * 例如: "去重慶同廈門玩"
    */
   @ApiProperty({ type: String, required: false })

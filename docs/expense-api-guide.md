@@ -158,7 +158,7 @@ Expense API 用於管理旅行中嘅消費記錄，包括：
 ```json
 POST /expenses
 {
-  "tripId": 1,
+  "activityId": 1,
   "title": "晚餐",
   "amount": "300.00",
   "currency": "HKD",
@@ -187,7 +187,7 @@ POST /expenses
 ```json
 POST /expenses
 {
-  "tripId": 1,
+  "activityId": 1,
   "title": "晚餐",
   "amount": "300.00",
   "currency": "HKD",
@@ -217,7 +217,7 @@ POST /expenses
 ```json
 POST /expenses
 {
-  "tripId": 1,
+  "activityId": 1,
   "title": "晚餐",
   "amount": "300.00",
   "currency": "HKD",
@@ -287,7 +287,7 @@ POST /expenses
 Content-Type: application/json
 
 {
-  "tripId": 1,
+  "activityId": 1,
   "title": "晚餐",
   "amount": "300.00",
   "currency": "HKD",

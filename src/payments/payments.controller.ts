@@ -15,7 +15,7 @@ import { UpdatePaymentDto } from './dto/update-payment.dto';
  */
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
   /**
    * 創建新 Payment
@@ -23,7 +23,7 @@ export class PaymentsController {
    * HTTP: POST /payments
    * Request Body 例子:
    * {
-   *   "tripId": 1,
+   *   "activityId": 1,
    *   "fromUserId": 2,  // Yanki 還錢
    *   "toUserId": 1,    // 俾 Kevin
    *   "amount": "50.00",

@@ -11,14 +11,14 @@ import { eq } from 'drizzle-orm';
  * 
  * 主要功能：
  * - CRUD operations for payments
- * - 管理 trip 入面嘅還款記錄
+ * - 管理 activity 入面嘅還款記錄
  * 
  * 用途：
  * - 記錄邊個還錢俾邊個
- * - 用於結算 trip 嘅欠款
+ * - 用於結算 activity 嘅欠款
  * 
  * 注意：
- * - 每個 payment 必須屬於一個 trip
+ * - 每個 payment 必須屬於一個 activity
  * - fromUserId 係還錢嘅人（欠錢嘅人）
  * - toUserId 係收錢嘅人（多俾咗錢嘅人）
  */
@@ -26,14 +26,14 @@ import { eq } from 'drizzle-orm';
 export class PaymentsService {
   constructor(
     @Inject(DrizzleAsyncProvider) private readonly db: NeonHttpDatabase<typeof schema>,
-  ) {}
+  ) { }
 
   /**
    * 創建新 Payment
    * 
    * 例子：
    * createPaymentDto = {
-   *   tripId: 1,
+   *   activityId: 1,
    *   fromUserId: 2,  // Yanki 還錢
    *   toUserId: 1,    // 俾 Kevin
    *   amount: "50.00",

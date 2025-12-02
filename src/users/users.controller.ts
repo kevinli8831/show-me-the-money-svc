@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { formatSuccessResponse } from '../common/helpers';
 
 /**
  * UsersController - 處理所有 /users 開頭嘅 HTTP requests
@@ -22,7 +23,7 @@ export class UsersController {
    * 
    * NestJS 會自動 inject UsersService instance
    */
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   /**
    * 創建新 User
@@ -43,8 +44,9 @@ export class UsersController {
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  async create(@Body() createUserDto: CreateUserDto) {
+    const user = await this.usersService.create(createUserDto);
+    return formatSuccessResponse(user, '成功創建 User');
   }
 
   /**
@@ -54,8 +56,9 @@ export class UsersController {
    * Response: Array of user objects
    */
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  async findAll() {
+    const users = await this.usersService.findAll();
+    return formatSuccessResponse(users, '成功獲取 Users');
   }
 
   /**
@@ -67,8 +70,9 @@ export class UsersController {
    * +id 會將 string 轉做 number (例如: "1" -> 1)
    */
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    const user = await this.usersService.findOne(+id);
+    return formatSuccessResponse(user, '成功獲取 User');
   }
 
   /**
@@ -83,8 +87,9 @@ export class UsersController {
    * 只需要提供要 update 嘅 fields，其他 fields 保持不變
    */
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    const user = await this.usersService.update(+id, updateUserDto);
+    return formatSuccessResponse(user, '成功更新 User');
   }
 
   /**
@@ -95,7 +100,8 @@ export class UsersController {
    * 會永久刪除 user record
    */
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  async remove(@Param('id') id: string) {
+    const result = await this.usersService.remove(+id);
+    return formatSuccessResponse(result, '成功刪除 User');
   }
 }

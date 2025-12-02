@@ -5,6 +5,7 @@ import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
+import { formatSuccessResponse } from '../common/helpers';
 // import { AppleOAuthGuard } from './guards/apple-oauth.guard';
 
 @Controller('auth')
@@ -80,7 +81,8 @@ export class AuthController {
     const googleUser = await this.authService.exchangeCodeForUser(code, redirectUri, codeVerifier);
 
     // 2. Login (Generate JWT)
-    return this.authService.login(googleUser);
+    const result = await this.authService.login(googleUser);
+    return formatSuccessResponse(result, '登入成功');
   }
 
   // ... Apple endpoints (commented out) ...
@@ -122,7 +124,8 @@ export class AuthController {
     if (!refreshToken) {
       throw new BadRequestException('Refresh token is required');
     }
-    return this.authService.refresh(refreshToken);
+    const result = await this.authService.refresh(refreshToken);
+    return formatSuccessResponse(result, '成功更新 Token');
   }
 
   /**
@@ -138,6 +141,6 @@ export class AuthController {
     console.log("🚀 ~ AuthController ~ logout ~ req:", req)
     const userId = req.user['userId']; // JwtStrategy return userId
     await this.authService.logout(userId);
-    return { message: 'Logout successful' };
+    return formatSuccessResponse(null, '登出成功');
   }
 }

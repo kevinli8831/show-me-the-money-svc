@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { formatSuccessResponse } from '../common/helpers';
 
 /**
  * PaymentsController - 處理所有 /payments 開頭嘅 HTTP requests
@@ -32,8 +33,9 @@ export class PaymentsController {
    * }
    */
   @Post()
-  create(@Body() createPaymentDto: CreatePaymentDto) {
-    return this.paymentsService.create(createPaymentDto);
+  async create(@Body() createPaymentDto: CreatePaymentDto) {
+    const payment = await this.paymentsService.create(createPaymentDto);
+    return formatSuccessResponse(payment, '成功創建 Payment');
   }
 
   /**
@@ -42,8 +44,9 @@ export class PaymentsController {
    * HTTP: GET /payments
    */
   @Get()
-  findAll() {
-    return this.paymentsService.findAll();
+  async findAll() {
+    const payments = await this.paymentsService.findAll();
+    return formatSuccessResponse(payments, '成功獲取 Payments');
   }
 
   /**
@@ -52,8 +55,9 @@ export class PaymentsController {
    * HTTP: GET /payments/1
    */
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.paymentsService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    const payment = await this.paymentsService.findOne(+id);
+    return formatSuccessResponse(payment, '成功獲取 Payment');
   }
 
   /**
@@ -66,8 +70,9 @@ export class PaymentsController {
    * }
    */
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
-    return this.paymentsService.update(+id, updatePaymentDto);
+  async update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
+    const payment = await this.paymentsService.update(+id, updatePaymentDto);
+    return formatSuccessResponse(payment, '成功更新 Payment');
   }
 
   /**
@@ -76,7 +81,8 @@ export class PaymentsController {
    * HTTP: DELETE /payments/1
    */
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.paymentsService.remove(+id);
+  async remove(@Param('id') id: string) {
+    const result = await this.paymentsService.remove(+id);
+    return formatSuccessResponse(result, '成功刪除 Payment');
   }
 }

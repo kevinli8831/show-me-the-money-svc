@@ -3,6 +3,7 @@ import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { OptionalJwtGuard } from '../auth/guards/auth.guard';
+import { formatSuccessResponse } from '../common/helpers';
 
 /**
  * ExpensesController - 處理所有 /expenses 開頭嘅 HTTP requests
@@ -34,8 +35,9 @@ export class ExpensesController {
    * }
    */
   @Post()
-  create(@Body() createExpenseDto: CreateExpenseDto) {
-    return this.expensesService.create(createExpenseDto);
+  async create(@Body() createExpenseDto: CreateExpenseDto) {
+    const expense = await this.expensesService.create(createExpenseDto);
+    return formatSuccessResponse(expense, '成功創建 Expense');
   }
 
   /**
@@ -44,8 +46,9 @@ export class ExpensesController {
    * HTTP: GET /expenses
    */
   @Get()
-  findAll() {
-    return this.expensesService.findAll();
+  async findAll() {
+    const expenses = await this.expensesService.findAll();
+    return formatSuccessResponse(expenses, '成功獲取 Expenses');
   }
 
   /**
@@ -54,8 +57,9 @@ export class ExpensesController {
    * HTTP: GET /expenses/1
    */
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.expensesService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    const expense = await this.expensesService.findOne(+id);
+    return formatSuccessResponse(expense, '成功獲取 Expense');
   }
 
   /**
@@ -69,13 +73,14 @@ export class ExpensesController {
    */
   @Patch(':id')
   @UseGuards(OptionalJwtGuard)
-  update(
+  async update(
     @Param('id') id: string,
     @Body() updateExpenseDto: UpdateExpenseDto,
     @Headers('x-member-token') memberToken: string,
     @Req() req,
   ) {
-    return this.expensesService.update(+id, memberToken, updateExpenseDto, req.user?.userId);
+    const expense = await this.expensesService.update(+id, memberToken, updateExpenseDto, req.user?.userId);
+    return formatSuccessResponse(expense, '成功更新 Expense');
   }
 
   /**
@@ -85,11 +90,12 @@ export class ExpensesController {
    */
   @Delete(':id')
   @UseGuards(OptionalJwtGuard)
-  remove(
+  async remove(
     @Param('id') id: string,
     @Headers('x-member-token') memberToken: string,
     @Req() req,
   ) {
-    return this.expensesService.remove(+id, memberToken, req.user?.userId);
+    const result = await this.expensesService.remove(+id, memberToken, req.user?.userId);
+    return formatSuccessResponse(result, '成功刪除 Expense');
   }
 }

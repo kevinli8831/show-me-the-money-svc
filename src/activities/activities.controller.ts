@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { OptionalJwtGuard } from '../auth/guards/auth.guard';
 import { CreateActivityMembersDto } from 'src/activitiesMembers/dto/create-activityMembers.dto';
+import { formatSuccessResponse } from '../common/helpers';
 
 /**
  * ActivitiesController - 處理所有 /activities 開頭嘅 HTTP requests
@@ -49,7 +50,8 @@ export class ActivitiesController {
   async create(@Body() createActivityDto: CreateActivityDto, @Req() req: Request & { user?: any }) {
     // If user is logged in (via JWT), use their ID
     console.log(req.user)
-    return this.activitiesService.create(createActivityDto);
+    const activity = await this.activitiesService.create(createActivityDto);
+    return formatSuccessResponse(activity, '成功創建 Activity');
   }
 
   /**
@@ -71,7 +73,8 @@ export class ActivitiesController {
   async findAll(@Query('include') include?: string, @Query('memberToken') memberToken?: string) {
     const includeOptions = include?.split(',') || [];
     const activities = await this.activitiesService.findAll(includeOptions, memberToken);
-    return activities.map(activity => this.mapActivityResponse(activity));
+    const mappedActivities = activities.map(activity => this.mapActivityResponse(activity));
+    return formatSuccessResponse(mappedActivities, '成功獲取 Activities');
   }
 
   /**
@@ -87,7 +90,8 @@ export class ActivitiesController {
   async findByShareCode(@Param('shareCode') shareCode: string, @Query('include') include?: string) {
     const includeOptions = include?.split(',') || [];
     const activity = await this.activitiesService.findByShareCode(shareCode, includeOptions);
-    return this.mapActivityResponse(activity);
+    const mappedActivity = this.mapActivityResponse(activity);
+    return formatSuccessResponse(mappedActivity, '成功獲取 Activity');
   }
 
   /**
@@ -109,7 +113,8 @@ export class ActivitiesController {
   async findOne(@Param('id') id: string, @Query('include') include?: string) {
     const includeOptions = include?.split(',') || [];
     const activity = await this.activitiesService.findOne(+id, includeOptions);
-    return this.mapActivityResponse(activity);
+    const mappedActivity = this.mapActivityResponse(activity);
+    return formatSuccessResponse(mappedActivity, '成功獲取 Activity');
   }
 
   /**
@@ -120,13 +125,14 @@ export class ActivitiesController {
    */
   @Patch(':id')
   @UseGuards(OptionalJwtGuard)
-  update(
+  async update(
     @Param('id') id: string,
     @Body() updateActivityDto: UpdateActivityDto,
     @Headers('x-member-token') memberToken: string,
     @Req() req,
   ) {
-    return this.activitiesService.update(+id, memberToken, updateActivityDto, req.user?.userId);
+    const activity = await this.activitiesService.update(+id, memberToken, updateActivityDto, req.user?.userId);
+    return formatSuccessResponse(activity, '成功更新 Activity');
   }
 
   /**
@@ -137,12 +143,13 @@ export class ActivitiesController {
    */
   @Delete(':id')
   @UseGuards(OptionalJwtGuard)
-  remove(
+  async remove(
     @Param('id') id: string,
     @Headers('x-member-token') memberToken: string,
     @Req() req,
   ) {
-    return this.activitiesService.remove(+id, memberToken, req.user?.userId);
+    const result = await this.activitiesService.remove(+id, memberToken, req.user?.userId);
+    return formatSuccessResponse(result, '成功刪除 Activity');
   }
 
   /**
@@ -154,8 +161,9 @@ export class ActivitiesController {
    * 用途：比其他 user join 個 activity
    */
   @Post(':id/members')
-  addMember(@Param('id') id: number, @Body() createActivityMembersDto: CreateActivityMembersDto) {
-    return this.activitiesService.addMember(+id, createActivityMembersDto);
+  async addMember(@Param('id') id: number, @Body() createActivityMembersDto: CreateActivityMembersDto) {
+    const member = await this.activitiesService.addMember(+id, createActivityMembersDto);
+    return formatSuccessResponse(member, '成功加入成員');
   }
 
   /**
@@ -166,8 +174,9 @@ export class ActivitiesController {
    * 用途：將 user 從 activity 移除
    */
   @Delete(':id/members/:userId')
-  removeMember(@Param('id') id: string, @Param('userId') userId: string) {
-    return this.activitiesService.removeMember(+id, +userId);
+  async removeMember(@Param('id') id: string, @Param('userId') userId: string) {
+    const result = await this.activitiesService.removeMember(+id, +userId);
+    return formatSuccessResponse(result, '成功移除成員');
   }
 
   /**
@@ -178,8 +187,9 @@ export class ActivitiesController {
   @Post(':id/join')
   @ApiOperation({ summary: '加入 Activity (Guest)', description: '任何人點 Link 直接入團，生成 memberToken' })
   @ApiResponse({ status: 201, description: 'Successfully joined activity', schema: { example: { activity: {}, memberToken: 'uuid' } } })
-  join(@Param('id') id: string, @Body('userName') userName?: string) {
-    return this.activitiesService.join(+id, userName);
+  async join(@Param('id') id: string, @Body('userName') userName?: string) {
+    const result = await this.activitiesService.join(+id, userName);
+    return formatSuccessResponse(result, '成功加入 Activity');
   }
 
   /**
@@ -203,11 +213,12 @@ export class ActivitiesController {
     @Req() req,
   ) {
     const realUserId = req.user.userId; // From JwtStrategy
-    return this.usersService.claimVirtualUser(
+    const result = await this.usersService.claimVirtualUser(
       claimDto.virtualUserId,
       realUserId,
       +id,
     );
+    return formatSuccessResponse(result, '成功認領虛擬成員');
   }
 
   /**
@@ -230,11 +241,12 @@ export class ActivitiesController {
     const realUserId = req.user.userId; // From JwtStrategy
     const guestMember = req.member; // From MemberTokenGuard
 
-    return this.usersService.claimGuestMember(
+    const result = await this.usersService.claimGuestMember(
       guestMember.userId,
       realUserId,
       +id,
     );
+    return formatSuccessResponse(result, '成功認領訪客成員');
   }
   private mapActivityResponse(activity: any) {
     if (activity.activityMembers) {

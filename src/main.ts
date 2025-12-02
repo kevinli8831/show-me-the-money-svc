@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LoggingInterceptor } from './logging.interceptor';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -68,6 +69,9 @@ async function bootstrap() {
 
   // Apply LoggingInterceptor globally
   app.useGlobalInterceptors(new LoggingInterceptor());
+
+  // Apply HttpExceptionFilter globally to format all error responses
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   /**
    * Swagger 設定

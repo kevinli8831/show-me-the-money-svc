@@ -47,7 +47,7 @@ export class ActivitiesService {
 
     // 將 Date object 轉做 string (YYYY-MM-DD)
     // 將 Date object 轉做 string (YYYY-MM-DD)
-    const newToken = crypto.randomUUID();
+    const newToken = this.generateMemberToken();
     activityData.creatorMemberToken = newToken;
     // 插入 activity 到 database
     const [activity] = await this.db
@@ -67,7 +67,7 @@ export class ActivitiesService {
     const [member] = await this.db.insert(schema.activityMembers).values({
       activityId: activity.id,
       userId: user?.id,
-      userName: user?.name,
+      userName: user?.name ?? 'Guest',
       isAdmin: true,
       isGuest: !user,
       memberToken: newToken,
@@ -277,12 +277,20 @@ export class ActivitiesService {
   }
   /**
    * 生成 Member Token
-   * 格式: mt + 16位 Base64Url
+   * 格式: mt- + 8位 alphanumeric
    */
   private generateMemberToken(): string {
-    const buffer = crypto.randomBytes(12); // 12 bytes = 96 bits
-    const base64Url = buffer.toString('base64url'); // ~16 chars
-    return `mt_${base64Url}`;
+    const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    const length = 8;
+    let result = '';
+    const randomBytes = crypto.randomBytes(length);
+
+    for (let i = 0; i < length; i++) {
+      const index = randomBytes[i] % characters.length;
+      result += characters[index];
+    }
+
+    return `mt-${result}`;
   }
 
   /**

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { ExpenseCategoriesService } from './expense-categories.service';
 import { CreateExpenseCategoryDto } from './dto/create-expense-category.dto';
 import { UpdateExpenseCategoryDto } from './dto/update-expense-category.dto';
+import { formatSuccessResponse } from '../common/helpers';
 
 /**
  * ExpenseCategoriesController - 處理所有 /expense-categories 開頭嘅 HTTP requests
@@ -16,7 +17,7 @@ import { UpdateExpenseCategoryDto } from './dto/update-expense-category.dto';
  */
 @Controller('expense-categories')
 export class ExpenseCategoriesController {
-  constructor(private readonly expenseCategoriesService: ExpenseCategoriesService) {}
+  constructor(private readonly expenseCategoriesService: ExpenseCategoriesService) { }
 
   /**
    * 建立新 Category
@@ -30,8 +31,9 @@ export class ExpenseCategoriesController {
    * }
    */
   @Post()
-  create(@Body() createDto: CreateExpenseCategoryDto) {
-    return this.expenseCategoriesService.create(createDto);
+  async create(@Body() createDto: CreateExpenseCategoryDto) {
+    const category = await this.expenseCategoriesService.create(createDto);
+    return formatSuccessResponse(category, '成功創建 Category');
   }
 
   /**
@@ -42,8 +44,9 @@ export class ExpenseCategoriesController {
    * 用於初始化 database，建立預設嘅 categories
    */
   @Post('seed')
-  seed() {
-    return this.expenseCategoriesService.seed();
+  async seed() {
+    const result = await this.expenseCategoriesService.seed();
+    return formatSuccessResponse(result, '成功 Seed Categories');
   }
 
   /**
@@ -54,8 +57,9 @@ export class ExpenseCategoriesController {
    * 只返回 isActive = true 嘅 categories
    */
   @Get()
-  findAll() {
-    return this.expenseCategoriesService.findAll();
+  async findAll() {
+    const categories = await this.expenseCategoriesService.findAll();
+    return formatSuccessResponse(categories, '成功獲取 Categories');
   }
 
   /**
@@ -64,8 +68,9 @@ export class ExpenseCategoriesController {
    * HTTP: GET /expense-categories/1
    */
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.expenseCategoriesService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    const category = await this.expenseCategoriesService.findOne(+id);
+    return formatSuccessResponse(category, '成功獲取 Category');
   }
 
   /**
@@ -79,8 +84,9 @@ export class ExpenseCategoriesController {
    * }
    */
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDto: UpdateExpenseCategoryDto) {
-    return this.expenseCategoriesService.update(+id, updateDto);
+  async update(@Param('id') id: string, @Body() updateDto: UpdateExpenseCategoryDto) {
+    const category = await this.expenseCategoriesService.update(+id, updateDto);
+    return formatSuccessResponse(category, '成功更新 Category');
   }
 
   /**
@@ -91,7 +97,8 @@ export class ExpenseCategoriesController {
    * 設 isActive = false，唔會真正刪除
    */
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.expenseCategoriesService.remove(+id);
+  async remove(@Param('id') id: string) {
+    const result = await this.expenseCategoriesService.remove(+id);
+    return formatSuccessResponse(result, '成功刪除 Category');
   }
 }

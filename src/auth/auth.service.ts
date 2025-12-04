@@ -251,8 +251,24 @@ export class AuthService {
       expiresIn: '1d',
     });
 
+    // Token Rotation: Generate NEW Refresh Token
+    const newRefreshToken = this.jwtService.sign({ sub: user.id, email: user.email }, {
+      secret: this.configService.get('JWT_REFRESH_SECRET'),
+      expiresIn: '365d',
+    });
+
+    // Hash NEW Refresh Token & Update DB
+    const hashedNewRefreshToken = await bcrypt.hash(newRefreshToken, 10);
+    await this.db.update(schema.users)
+      .set({ refreshToken: hashedNewRefreshToken })
+      .where(eq(schema.users.id, user.id));
+
+    // Encrypt NEW Refresh Token for Client
+    const encryptedNewRefreshToken = this.encrypt(newRefreshToken);
+
     return {
       accessToken: newAccessToken,
+      refreshToken: encryptedNewRefreshToken,
       user,
     };
   }

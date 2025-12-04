@@ -2,10 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ActivitiesController } from './activities.controller';
 import { ActivitiesService } from './activities.service';
 import { UsersService } from '../users/users.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { MemberTokenGuard } from '../auth/guards/member-token.guard';
-import { OptionalJwtGuard } from '../auth/guards/auth.guard';
+import { ConfigService } from '@nestjs/config';
+import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
 
+// Mock dependencies
 const mockActivitiesService = {
   create: jest.fn(),
   findAll: jest.fn(),
@@ -23,6 +23,10 @@ const mockUsersService = {
   claimGuestMember: jest.fn(),
 };
 
+const mockConfigService = {
+  get: jest.fn(),
+};
+
 describe('ActivitiesController', () => {
   let controller: ActivitiesController;
 
@@ -30,17 +34,24 @@ describe('ActivitiesController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ActivitiesController],
       providers: [
-        { provide: ActivitiesService, useValue: mockActivitiesService },
-        { provide: UsersService, useValue: mockUsersService },
+        {
+          provide: ActivitiesService,
+          useValue: mockActivitiesService,
+        },
+        {
+          provide: UsersService,
+          useValue: mockUsersService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
+        {
+          provide: DrizzleAsyncProvider,
+          useValue: {}, // Mock empty object as we don't use it directly in controller tests but guards might need it
+        },
       ],
-    })
-      .overrideGuard(JwtAuthGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(MemberTokenGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(OptionalJwtGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
+    }).compile();
 
     controller = module.get<ActivitiesController>(ActivitiesController);
     jest.clearAllMocks();
@@ -50,22 +61,23 @@ describe('ActivitiesController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('findByShareCode', () => {
-    it('should return a activity', async () => {
-      const mockActivity = { id: 1, name: 'Test Activity', shareCode: 'ABCD1234' };
-      mockActivitiesService.findByShareCode.mockResolvedValue(mockActivity);
+  describe('findAll', () => {
+    it('should call service.findAll with array of tokens', async () => {
+      const memberTokens = ['mt-1', 'mt-2'];
+      mockActivitiesService.findAll.mockResolvedValue([]);
 
-      const result = await controller.findByShareCode('ABCD1234');
-      expect(result).toEqual(mockActivity);
-      expect(mockActivitiesService.findByShareCode).toHaveBeenCalledWith('ABCD1234', []);
+      await controller.findAll(undefined, memberTokens);
+
+      expect(mockActivitiesService.findAll).toHaveBeenCalledWith([], memberTokens);
     });
 
-    it('should pass include options', async () => {
-      const mockActivity = { id: 1, name: 'Test Activity', shareCode: 'ABCD1234' };
-      mockActivitiesService.findByShareCode.mockResolvedValue(mockActivity);
+    it('should call service.findAll with single token', async () => {
+      const memberToken = 'mt-1';
+      mockActivitiesService.findAll.mockResolvedValue([]);
 
-      await controller.findByShareCode('ABCD1234', 'members,expenses');
-      expect(mockActivitiesService.findByShareCode).toHaveBeenCalledWith('ABCD1234', ['members', 'expenses']);
+      await controller.findAll(undefined, memberToken);
+
+      expect(mockActivitiesService.findAll).toHaveBeenCalledWith([], memberToken);
     });
   });
 });

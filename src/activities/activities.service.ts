@@ -4,7 +4,7 @@ import { UpdateActivityDto } from './dto/update-activity.dto';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../drizzle/schema';
-import { eq, and, exists, or } from 'drizzle-orm';
+import { eq, and, exists, or, inArray } from 'drizzle-orm';
 import { activityMembers, activities } from '../drizzle/schema';
 import * as crypto from 'crypto';
 
@@ -86,20 +86,21 @@ export class ActivitiesService {
    * findAll(['members']) -> 包括 members
    * findAll(['members', 'expenses']) -> 包括 members 同 expenses
    */
-  async findAll(include: string[] = [], memberToken?: string) {
+  async findAll(include: string[] = [], memberTokens?: string | string[]) {
     // 建 where 條件（filter by userId）
     let where: any = undefined;
-    if (memberToken) {
-      // 假設你有 subquery 拉 activity_members（user 參加或創建）
-      const userActivitiesSubquery = this.db
-        .select({ activityId: schema.activityMembers.activityId })
-        .from(schema.activityMembers)
-        .where(eq(schema.activityMembers.memberToken, memberToken));
+    if (memberTokens) {
+      const tokens = Array.isArray(memberTokens) ? memberTokens : [memberTokens];
 
-      where = or(
-        eq(schema.activities.creatorMemberToken, memberToken),  // 創建人
-        exists(userActivitiesSubquery)         // 或參加人
-      );
+      if (tokens.length > 0) {
+        // Find activities where ANY of the tokens is a member
+        const userActivitiesSubquery = this.db
+          .select({ activityId: schema.activityMembers.activityId })
+          .from(schema.activityMembers)
+          .where(inArray(schema.activityMembers.memberToken, tokens));
+
+        where = inArray(schema.activities.id, userActivitiesSubquery);
+      }
     }
 
     // 建 with 條件（根據 include）
@@ -112,8 +113,8 @@ export class ActivitiesService {
         orderBy: activityMembers.joinedAt,  // 可選：按加入時間排序
       };
     }
-    if (include.includes('expense')) {
-      withClause.expense = {
+    if (include.includes('expenses')) {
+      withClause.expenses = {
         with: {
           user: true,  // 拉 user 資料
         },

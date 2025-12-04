@@ -8,7 +8,7 @@ import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { OptionalJwtGuard } from '../auth/guards/auth.guard';
-import { CreateActivityMembersDto } from 'src/activitiesMembers/dto/create-activityMembers.dto';
+import { CreateActivityMembersDto } from '../activitiesMembers/dto/create-activityMembers.dto';
 import { formatSuccessResponse } from '../common/helpers';
 
 /**
@@ -67,10 +67,10 @@ export class ActivitiesController {
    */
   @Get()
   @ApiOperation({ summary: '獲取所有 Activities', description: '支援 ?include=members 查詢參數' })
-  @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members', example: 'members' })
-  @ApiQuery({ name: 'memberToken', required: false, description: 'User ID for filtering activities', example: '1' })
+  @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members, expenses', example: 'members, expenses', isArray: true, type: String })
+  @ApiQuery({ name: 'memberToken', required: false, description: 'User ID for filtering activities', example: '1', isArray: true, type: String })
   @ApiResponse({ status: 200, description: 'Successfully retrieved activities' })
-  async findAll(@Query('include') include?: string, @Query('memberToken') memberToken?: string) {
+  async findAll(@Query('include') include?: string, @Query('memberToken') memberToken?: string | string[]) {
     const includeOptions = include?.split(',') || [];
     const activities = await this.activitiesService.findAll(includeOptions, memberToken);
     const mappedActivities = activities.map(activity => this.mapActivityResponse(activity));

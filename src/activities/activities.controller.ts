@@ -84,7 +84,7 @@ export class ActivitiesController {
    */
   @Get('share/:shareCode')
   @ApiOperation({ summary: '根據 Share Code 獲取 Activity', description: '支援 ?include=members,expenses' })
-  @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members,expenses', example: 'members,expenses' })
+  @ApiQuery({ name: 'include', required: false, description: 'Comma-separated list: members, expenses', example: 'members, expenses', isArray: true, type: String })
   @ApiResponse({ status: 200, description: 'Successfully retrieved activity' })
   @ApiResponse({ status: 404, description: 'Activity not found' })
   async findByShareCode(@Param('shareCode') shareCode: string, @Query('include') include?: string) {

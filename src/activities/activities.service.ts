@@ -115,9 +115,9 @@ export class ActivitiesService {
     }
     if (include.includes('expenses')) {
       withClause.expenses = {
-        with: {
-          user: true,  // 拉 user 資料
-        },
+        // with: {
+        //   user: true,  // expenses table doesn't have direct user relation, it uses arrays & tokens
+        // },
         orderBy: schema.expenses.createdAt,  // 可選：按加入時間排序
       };
     }

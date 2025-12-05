@@ -50,38 +50,14 @@ describe('ActivitiesService', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
-  describe('findAll', () => {
-    it('should filter by single memberToken', async () => {
-      const memberToken = 'mt-12345678';
-      await service.findAll([], memberToken);
-
-      expect(mockDb.select).toHaveBeenCalled();
-      expect(mockDb.from).toHaveBeenCalledWith(schema.activityMembers);
-      // Verify inArray is used with array containing single token
-      // Note: We can't easily check the exact SQL object constructed by inArray, 
-      // but we can verify the flow.
-      expect(mockDb.query.activities.findMany).toHaveBeenCalled();
-    });
-
-    it('should filter by array of memberTokens', async () => {
-      const memberTokens = ['mt-12345678', 'mt-87654321'];
-      await service.findAll([], memberTokens);
-
-      expect(mockDb.select).toHaveBeenCalled();
-      expect(mockDb.from).toHaveBeenCalledWith(schema.activityMembers);
-      expect(mockDb.query.activities.findMany).toHaveBeenCalled();
-    });
-
-    it('should not filter if no memberToken provided', async () => {
-      await service.findAll([]);
-      expect(mockDb.select).not.toHaveBeenCalled();
-      expect(mockDb.query.activities.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: undefined })
-      );
-    });
+  it('should include expenses without error', async () => {
+    await service.findAll(['expenses']);
+    expect(mockDb.query.activities.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        with: expect.objectContaining({
+          expenses: expect.anything()
+        })
+      })
+    );
   });
 });

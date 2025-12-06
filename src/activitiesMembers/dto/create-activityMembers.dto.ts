@@ -20,9 +20,10 @@ export class CreateActivityMembersDto {
    * Activity 名稱
    * 例如: "重廈旅行"
    */
-  @ApiProperty({ type: String, required: true })
+  @ApiProperty({ type: String, required: false })
   @IsString()
-  userName: string;
+  @IsOptional()
+  userName?: string;
 
   /**
    * Activity 描述（可選）
@@ -39,8 +40,9 @@ export class CreateActivityMembersDto {
    * 如果有提供，他已經登入了
    * @Type(() => Number) 確保 JSON number 轉做 TypeScript number
    */
-  @ApiProperty({ type: Boolean, required: true })
+  @ApiProperty({ type: Boolean, required: false })
   @IsBoolean()
-  isAdmin: boolean;
+  @IsOptional()
+  isAdmin?: boolean;
 
 }

@@ -42,7 +42,7 @@ export class CreateActivityDto {
   @ApiProperty({ type: Number, required: false })
   @Type(() => Number)
   @IsOptional()
-  userId?: number;
+  creatorUserId?: number;
 
   /**
    * 開始日期（可選）

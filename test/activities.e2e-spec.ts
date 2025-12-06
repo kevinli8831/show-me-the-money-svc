@@ -28,7 +28,7 @@ describe('ActivitiesController (e2e)', () => {
       .post('/users')
       .send(createUserDto)
       .expect(201);
-    userId = userRes.body.id;
+    userId = userRes.body.data.id;
   });
 
   afterAll(async () => {
@@ -51,24 +51,17 @@ describe('ActivitiesController (e2e)', () => {
       .send(createActivityDto)
       .expect(201);
 
-    expect(response.body).toHaveProperty('id');
-    expect(response.body.name).toBe(createActivityDto.name);
-    expect(response.body.creatorUserId).toBe(userId);
-    createdActivityId = response.body.id;
+    expect(response.body.data).toHaveProperty('activity');
+    expect(response.body.data.activity.name).toBe(createActivityDto.name);
+    createdActivityId = response.body.data.activity.id;
   });
 
   it('/activities (POST) - Should create activity_member for creator', async () => {
-    // Query the database to check if activity_member was created
-    // We'll use a direct database query via a GET endpoint we'll create
-    // For now, we'll verify by trying to add the same user again (should fail if already exists)
-
-    // Try to add the creator again - this should work for now since we don't have duplicate check
-    // But we can verify the member exists by checking if we can remove them
     const response = await request(app.getHttpServer())
       .delete(`/activities/${createdActivityId}/members/${userId}`)
       .expect(200);
 
-    expect(response.body.message).toBe('Member removed successfully');
+    expect(response.body.message).toBe('成功移除成員');
 
     // Add them back for other tests
     await request(app.getHttpServer())
@@ -82,8 +75,8 @@ describe('ActivitiesController (e2e)', () => {
       .get('/activities')
       .expect(200);
 
-    expect(Array.isArray(response.body)).toBe(true);
-    expect(response.body.length).toBeGreaterThan(0);
+    expect(Array.isArray(response.body.data)).toBe(true);
+    expect(response.body.data.length).toBeGreaterThan(0);
   });
 
   it('/activities/:id (GET) - Get One Activity', async () => {
@@ -91,7 +84,7 @@ describe('ActivitiesController (e2e)', () => {
       .get(`/activities/${createdActivityId}`)
       .expect(200);
 
-    expect(response.body.id).toBe(createdActivityId);
+    expect(response.body.data.id).toBe(createdActivityId);
   });
 
   it('/activities/:id (GET) - Get One Activity (Not Found)', async () => {
@@ -101,24 +94,45 @@ describe('ActivitiesController (e2e)', () => {
   });
 
   it('/activities/:id (PATCH) - Update Activity', async () => {
+    // Determine token first
+    const activityWithMembers = await request(app.getHttpServer())
+      .get(`/activities/${createdActivityId}?include=members`);
+
+    // Only proceed if members are returned (they should be)
+    const members = activityWithMembers.body.data.members;
+    const member = members.find((m: any) => m.userId === userId);
+    const memberToken = member.memberToken;
+
     const response = await request(app.getHttpServer())
       .patch(`/activities/${createdActivityId}`)
+      .set('x-member-token', memberToken)
       .send({ name: 'Updated Activity Name' })
       .expect(200);
 
-    expect(response.body.name).toBe('Updated Activity Name');
+    expect(response.body.data.name).toBe('Updated Activity Name');
   });
 
   it('/activities/:id (PATCH) - Update Activity (Not Found)', async () => {
     await request(app.getHttpServer())
       .patch('/activities/999999')
+      .set('x-member-token', 'dummy')
       .send({ name: 'Ghost' })
       .expect(404);
   });
 
   it('/activities/:id (DELETE) - Delete Activity', async () => {
+    // Get token
+    const activityWithMembers = await request(app.getHttpServer())
+      .get(`/activities/${createdActivityId}?include=members`);
+
+    // Need to handle if activity already gone? No, previous tests shouldn't delete it.
+    const members = activityWithMembers.body.data.members;
+    const member = members.find((m: any) => m.userId === userId);
+    const memberToken = member.memberToken;
+
     await request(app.getHttpServer())
       .delete(`/activities/${createdActivityId}`)
+      .set('x-member-token', memberToken)
       .expect(200);
 
     await request(app.getHttpServer())
@@ -129,6 +143,7 @@ describe('ActivitiesController (e2e)', () => {
   it('/activities/:id (DELETE) - Delete Activity (Not Found)', async () => {
     await request(app.getHttpServer())
       .delete('/activities/999999')
+      .set('x-member-token', 'dummy')
       .expect(404);
   });
 });

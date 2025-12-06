@@ -8,6 +8,7 @@ describe('Virtual Members (e2e)', () => {
   let createdActivityId: number;
   let createdVirtualUserId: number;
   let createdRealUserId: number;
+  let creatorMemberToken: string;
   let accessToken: string;
 
   beforeAll(async () => {
@@ -30,13 +31,13 @@ describe('Virtual Members (e2e)', () => {
         .post('/users')
         .send({
           name: 'Alice',
-          email: 'alice@example.com',
+          email: `alice-${Date.now()}@example.com`,
         })
         .expect(201);
 
-      createdRealUserId = response.body.id;
-      expect(response.body.name).toBe('Alice');
-      expect(response.body.userType).toBe('email');
+      createdRealUserId = response.body.data.id;
+      expect(response.body.data.name).toBe('Alice');
+      expect(response.body.data.userType).toBe('email');
     });
 
     it('should create a activity', async () => {
@@ -51,8 +52,9 @@ describe('Virtual Members (e2e)', () => {
         })
         .expect(201);
 
-      createdActivityId = response.body.id;
-      expect(response.body.name).toBe('日本旅行');
+      createdActivityId = response.body.data.activity.id;
+      creatorMemberToken = response.body.data.member.memberToken;
+      expect(response.body.data.activity.name).toBe('日本旅行');
     });
 
     it('should create a virtual member', async () => {
@@ -65,11 +67,11 @@ describe('Virtual Members (e2e)', () => {
         })
         .expect(201);
 
-      createdVirtualUserId = response.body.id;
-      expect(response.body.name).toBe('Kevin');
-      expect(response.body.userType).toBe('virtual');
-      expect(response.body.email).toBeNull();
-      expect(response.body.provider).toBeNull();
+      createdVirtualUserId = response.body.data.id;
+      expect(response.body.data.name).toBe('Kevin');
+      expect(response.body.data.userType).toBe('virtual');
+      expect(response.body.data.email).toBeNull();
+      expect(response.body.data.provider).toBeNull();
     });
 
     it('should add virtual member to activity', async () => {
@@ -80,7 +82,7 @@ describe('Virtual Members (e2e)', () => {
         })
         .expect(201);
 
-      expect(response.body.message).toBe('Member added successfully');
+      expect(response.body.message).toBe('成功加入成員');
     });
 
     it('should get activity with members using include parameter', async () => {
@@ -88,13 +90,13 @@ describe('Virtual Members (e2e)', () => {
         .get(`/activities/${createdActivityId}?include=members`)
         .expect(200);
 
-      expect(response.body.id).toBe(createdActivityId);
-      expect(response.body.members).toBeDefined();
-      expect(Array.isArray(response.body.members)).toBe(true);
-      expect(response.body.members.length).toBeGreaterThan(0);
+      expect(response.body.data.id).toBe(createdActivityId);
+      expect(response.body.data.members).toBeDefined();
+      expect(Array.isArray(response.body.data.members)).toBe(true);
+      expect(response.body.data.members.length).toBeGreaterThan(0);
 
       // Should have both real user and virtual user
-      const virtualMember = response.body.members.find(
+      const virtualMember = response.body.data.members.find(
         (m: any) => m.userId === createdVirtualUserId,
       );
       expect(virtualMember).toBeDefined();
@@ -106,8 +108,8 @@ describe('Virtual Members (e2e)', () => {
         .get(`/activities/${createdActivityId}`)
         .expect(200);
 
-      expect(response.body.id).toBe(createdActivityId);
-      expect(response.body.members).toBeUndefined();
+      expect(response.body.data.id).toBe(createdActivityId);
+      expect(response.body.data.members).toBeUndefined();
     });
 
     it('should get all activities with members using include parameter', async () => {
@@ -115,8 +117,8 @@ describe('Virtual Members (e2e)', () => {
         .get('/activities?include=members')
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      const activity = response.body.find((t: any) => t.id === createdActivityId);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      const activity = response.body.data.find((t: any) => t.id === createdActivityId);
       expect(activity).toBeDefined();
       expect(activity.members).toBeDefined();
       expect(Array.isArray(activity.members)).toBe(true);
@@ -138,12 +140,17 @@ describe('Virtual Members (e2e)', () => {
 
     // Cleanup
     it('should delete the activity', async () => {
+      // Must delete activity first (cleans members/expenses)
+      // Must provide token
       await request(app.getHttpServer())
         .delete(`/activities/${createdActivityId}`)
+        .set('x-member-token', creatorMemberToken)
         .expect(200);
     });
 
     it('should delete the virtual user', async () => {
+      // If activity deleted, virtual user might be orphan.
+      // E2E test usually cleans up.
       await request(app.getHttpServer())
         .delete(`/users/${createdVirtualUserId}`)
         .expect(200);

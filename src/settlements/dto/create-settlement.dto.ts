@@ -5,11 +5,11 @@
  * - 定義 POST /payments 嘅 request body 結構
  * - 記錄還款資訊
  */
-export class CreatePaymentDto {
+export class CreateSettlementDto {
   /**
    * Activity ID（必填）
    * 
-   * 指定呢個 payment 屬於邊個 activity
+   * 指定呢個 settlement 屬於邊個 activity
    */
   activityId: number;
 
@@ -18,14 +18,14 @@ export class CreatePaymentDto {
    * 
    * 記錄邊個 user 還錢（欠錢嘅人）
    */
-  fromUserId: number;
+  payerToken: string;
 
   /**
    * 收款人 User ID（必填）
    * 
    * 記錄邊個 user 收錢（多俾咗錢嘅人）
    */
-  toUserId: number;
+  receiverToken: string;
 
   /**
    * 還款金額（必填）
@@ -39,17 +39,9 @@ export class CreatePaymentDto {
   amount: string;
 
   /**
-   * 貨幣代碼（可選）
-   * 
-   * 例如: "HKD", "USD", "CNY"
-   * 預設: "HKD"
-   */
-  currency?: string;
-
-  /**
    * 備註（可選）
    * 
    * 例如: "轉數快", "現金", "PayMe"
    */
-  note?: string;
+  description?: string;
 }

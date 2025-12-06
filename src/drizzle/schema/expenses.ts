@@ -1,5 +1,6 @@
 import { pgTable, bigserial, bigint, varchar, decimal, timestamp, text, numeric } from 'drizzle-orm/pg-core';
 import { activities } from './activities';
+import { expenseParticipants } from './expense_participants';
 import { relations } from 'drizzle-orm';
 
 /**
@@ -27,33 +28,12 @@ export const expenses = pgTable('expenses', {
   /**
    * 總金額
    */
-  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
 
   /**
    * 貨幣
    */
   currency: varchar('currency', { length: 3 }).default('HKD'),
-
-  /**
-   * 參與者 Token 列表 (Member Tokens)
-   * 
-   * 對應 paidAmounts 和 shareAmounts 的順序
-   */
-  participantTokens: text('participant_tokens').array().notNull(),
-
-  /**
-   * 實際付款金額列表 (Paid Amounts)
-   * 
-   * 對應 participantTokens
-   */
-  paidAmounts: numeric('paid_amounts', { precision: 12, scale: 2 }).array().notNull(),
-
-  /**
-   * 應付金額列表 (Share Amounts)
-   * 
-   * 對應 participantTokens
-   */
-  shareAmounts: numeric('share_amounts', { precision: 12, scale: 2 }).array().notNull(),
 
   /**
    * 創建者 Token (Member Token)
@@ -65,9 +45,10 @@ export const expenses = pgTable('expenses', {
 });
 
 
-export const expensesRelations = relations(expenses, ({ one }) => ({
+export const expensesRelations = relations(expenses, ({ one, many }) => ({
   activity: one(activities, {
     fields: [expenses.activityId],
     references: [activities.id],
   }),
+  participants: many(expenseParticipants),
 }));

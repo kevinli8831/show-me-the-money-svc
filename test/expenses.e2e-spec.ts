@@ -3,11 +3,13 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { CreateExpenseDto } from '../src/expenses/dto/create-expense.dto';
+import { CreateActivityDto } from '../src/activities/dto/create-activity.dto';
 
 describe('ExpensesController (e2e)', () => {
   let app: INestApplication;
-  let userId: number;
+  let user1Id: number;
   let activityId: number;
+  let memberToken: string;
   let createdExpenseId: number;
 
   beforeAll(async () => {
@@ -18,34 +20,53 @@ describe('ExpensesController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    // Create User
+    // 1. Create User
     const userRes = await request(app.getHttpServer())
       .post('/users')
       .send({ name: 'Expense User', email: `expense-user-${Date.now()}@example.com` })
       .expect(201);
-    userId = userRes.body.id;
+    user1Id = userRes.body.data.id;
 
-    // Create Activity
+    // 2. Create Activity
+    const createActivityDto: CreateActivityDto = {
+      name: 'Expense Activity',
+      creatorUserId: user1Id
+    };
+
     const activityRes = await request(app.getHttpServer())
       .post('/activities')
-      .send({ name: 'Expense Activity', creatorUserId: userId })
+      .send(createActivityDto)
       .expect(201);
-    activityId = activityRes.body.id;
+
+    activityId = activityRes.body.data.activity.id;
+    memberToken = activityRes.body.data.member.memberToken;
   });
 
   afterAll(async () => {
-    if (activityId) await request(app.getHttpServer()).delete(`/activities/${activityId}`);
-    if (userId) await request(app.getHttpServer()).delete(`/users/${userId}`);
+    if (activityId && memberToken) {
+      await request(app.getHttpServer())
+        .delete(`/activities/${activityId}`)
+        .set('x-member-token', memberToken)
+        .expect(200);
+    }
+    if (user1Id) await request(app.getHttpServer()).delete(`/users/${user1Id}`);
     await app.close();
   });
 
   it('/expenses (POST) - Create Expense', async () => {
     const createExpenseDto: CreateExpenseDto = {
       activityId: activityId,
-      title: 'Lunch',
-      amount: '150.00',
-      createdBy: userId,
+      description: 'Lunch',
+      totalAmount: '150.00',
       currency: 'HKD',
+      createdByToken: memberToken,
+      participants: [
+        {
+          memberToken: memberToken,
+          paidAmount: '150.00',
+          owedAmount: '150.00',
+        }
+      ]
     };
 
     const response = await request(app.getHttpServer())
@@ -53,10 +74,10 @@ describe('ExpensesController (e2e)', () => {
       .send(createExpenseDto)
       .expect(201);
 
-    expect(response.body).toHaveProperty('id');
-    expect(response.body.title).toBe(createExpenseDto.title);
-    expect(response.body.amount).toBe(createExpenseDto.amount);
-    createdExpenseId = response.body.id;
+    expect(response.body.data).toHaveProperty('id');
+    expect(response.body.data.description).toBe(createExpenseDto.description);
+    expect(response.body.data.totalAmount).toBe(createExpenseDto.totalAmount);
+    createdExpenseId = response.body.data.id;
   });
 
   it('/expenses (GET) - Get All Expenses', async () => {
@@ -64,8 +85,8 @@ describe('ExpensesController (e2e)', () => {
       .get('/expenses')
       .expect(200);
 
-    expect(Array.isArray(response.body)).toBe(true);
-    expect(response.body.length).toBeGreaterThan(0);
+    expect(Array.isArray(response.body.data)).toBe(true);
+    expect(response.body.data.length).toBeGreaterThan(0);
   });
 
   it('/expenses/:id (GET) - Get One Expense', async () => {
@@ -73,7 +94,7 @@ describe('ExpensesController (e2e)', () => {
       .get(`/expenses/${createdExpenseId}`)
       .expect(200);
 
-    expect(response.body.id).toBe(createdExpenseId);
+    expect(response.body.data.id).toBe(createdExpenseId);
   });
 
   it('/expenses/:id (GET) - Get One Expense (Not Found)', async () => {
@@ -85,22 +106,24 @@ describe('ExpensesController (e2e)', () => {
   it('/expenses/:id (PATCH) - Update Expense', async () => {
     const response = await request(app.getHttpServer())
       .patch(`/expenses/${createdExpenseId}`)
-      .send({ title: 'Dinner' })
+      .set('x-member-token', memberToken)
+      .send({ description: 'Dinner' })
       .expect(200);
 
-    expect(response.body.title).toBe('Dinner');
+    expect(response.body.data.description).toBe('Dinner');
   });
 
   it('/expenses/:id (PATCH) - Update Expense (Not Found)', async () => {
     await request(app.getHttpServer())
       .patch('/expenses/999999')
-      .send({ title: 'Ghost' })
+      .send({ description: 'Ghost' })
       .expect(404);
   });
 
   it('/expenses/:id (DELETE) - Delete Expense', async () => {
     await request(app.getHttpServer())
       .delete(`/expenses/${createdExpenseId}`)
+      .set('x-member-token', memberToken)
       .expect(200);
 
     await request(app.getHttpServer())

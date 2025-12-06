@@ -275,30 +275,60 @@ export class UsersService {
         ),
       );
 
-    // 2. Update expenses participantTokens
-    // This is tricky with arrays. We need to replace fromToken with toToken in the array.
-    // Postgres array_replace: array_replace(participant_tokens, 'fromToken', 'toToken')
-    // Drizzle sql operator can be used.
+    // 2. Update expense participants
+    // We need to merge participation. logical constraint: one participant per expense.
+    // If toToken already exists in an expense, merge amounts.
+    // If not, simply rename token.
 
-    await this.db.execute(sql`
-      UPDATE expenses
-      SET participant_tokens = array_replace(participant_tokens, ${fromToken}, ${toToken})
-      WHERE activity_id = ${activityId} AND ${fromToken} = ANY(participant_tokens)
-    `);
+    // Find all expenses in this activity
+    const activityExpenses = await this.db.query.expenses.findMany({
+      where: eq(schema.expenses.activityId, activityId),
+      columns: { id: true },
+    });
 
-    // Note: We are NOT merging amounts if both tokens existed in the same expense.
-    // If both existed, array_replace might result in duplicate tokens in the array?
-    // array_replace replaces ALL occurrences.
-    // If toToken was already there, we might end up with two toTokens?
-    // User schema has arrays for paidAmounts and shareAmounts corresponding to participantTokens.
-    // If we merge tokens, we must also merge amounts!
-    // This is very complex to do in SQL alone if both existed.
-    // For now, assuming they don't overlap in the same expense (unlikely for Guest vs Real unless they were added separately).
-    // If they overlap, we have a problem: the amounts arrays won't be merged, just the token array will have duplicates.
-    // But since paidAmounts/shareAmounts are parallel arrays, we can't just array_replace token.
-    // We would need to sum the amounts at the indices where tokens match.
-    // Given the complexity, and that Guest/Real usually implies one person, overlap is edge case.
-    // I will stick to array_replace for now.
+    const expenseIds = activityExpenses.map(e => e.id);
+
+    if (expenseIds.length === 0) return;
+
+    // Find all participations by fromToken
+    const fromParticipations = await this.db.query.expenseParticipants.findMany({
+      where: and(
+        sql`${schema.expenseParticipants.expenseId} IN ${expenseIds}`,
+        eq(schema.expenseParticipants.memberToken, fromToken)
+      ),
+    });
+
+    for (const fromPart of fromParticipations) {
+      // Check if toToken is also a participant in this expense
+      const toPart = await this.db.query.expenseParticipants.findFirst({
+        where: and(
+          eq(schema.expenseParticipants.expenseId, fromPart.expenseId),
+          eq(schema.expenseParticipants.memberToken, toToken)
+        ),
+      });
+
+      if (toPart) {
+        // Merge amounts to toPart
+        const newPaid = String(parseFloat(toPart.paidAmount) + parseFloat(fromPart.paidAmount));
+        const newOwed = String(parseFloat(toPart.owedAmount) + parseFloat(fromPart.owedAmount));
+
+        await this.db
+          .update(schema.expenseParticipants)
+          .set({ paidAmount: newPaid, owedAmount: newOwed })
+          .where(eq(schema.expenseParticipants.id, toPart.id));
+
+        // Delete fromPart
+        await this.db
+          .delete(schema.expenseParticipants)
+          .where(eq(schema.expenseParticipants.id, fromPart.id));
+      } else {
+        // Just rename fromPart
+        await this.db
+          .update(schema.expenseParticipants)
+          .set({ memberToken: toToken })
+          .where(eq(schema.expenseParticipants.id, fromPart.id));
+      }
+    }
   }
 
   /**

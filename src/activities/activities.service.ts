@@ -66,10 +66,10 @@ export class ActivitiesService {
 
     const [member] = await this.db.insert(schema.activityMembers).values({
       activityId: activity.id,
-      userId: user?.id,
+      userId: user?.id ?? createActivityDto.creatorUserId,
       userName: user?.name ?? 'Guest',
       isAdmin: true,
-      isGuest: !user,
+      isGuest: !user && !createActivityDto.creatorUserId,
       memberToken: newToken,
     }).returning();
 
@@ -137,17 +137,25 @@ export class ActivitiesService {
    * @param include - 指定要 include 咩 nested data (e.g. ['members', 'expenses'])
    */
   async findOne(id: number, include: string[] = []) {
+    const withClause: any = {};
+    if (include.includes('members')) {
+      withClause.activityMembers = {
+        with: {
+          user: true,
+        },
+      };
+    }
+    if (include.includes('expenses')) {
+      withClause.expenses = {
+        with: {
+          participants: true
+        }
+      };
+    }
+
     const activity = await this.db.query.activities.findFirst({
       where: eq(schema.activities.id, id),
-      ...(include.includes('members') && {
-        with: {
-          activityMembers: {
-            with: {
-              user: true,
-            },
-          },
-        },
-      }),
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
     });
 
     if (!activity) {
@@ -236,11 +244,23 @@ export class ActivitiesService {
    */
   async addMember(activityId: number, createActivityMembersDto: CreateActivityMembersDto) {
 
+    let userName = createActivityMembersDto.userName;
+    if (!userName && createActivityMembersDto.userId) {
+      const user = await this.db.query.users.findFirst({
+        where: eq(schema.users.id, createActivityMembersDto.userId),
+      });
+      if (user) {
+        userName = user.name;
+      } else {
+        userName = 'Unknown';
+      }
+    }
+
     // 插入 activity member，預設唔係 Admin
     await this.db.insert(schema.activityMembers).values({
       activityId,
       userId: createActivityMembersDto.userId,
-      userName: createActivityMembersDto.userName,
+      userName: userName ?? 'Guest',
       isAdmin: createActivityMembersDto.isAdmin,
       joinedAt: new Date(),
       isVirtual: !createActivityMembersDto.userId,

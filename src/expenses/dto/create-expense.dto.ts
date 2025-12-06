@@ -20,9 +20,9 @@ export class CreateExpenseDto {
   description: string;
 
   /**
-   * 金額（必填）
+   * 總金額（必填）
    */
-  amount: string;
+  totalAmount: string;
 
   /**
    * 貨幣代碼（可選）
@@ -30,19 +30,13 @@ export class CreateExpenseDto {
   currency?: string;
 
   /**
-   * 參與者 Token 列表 (Member Tokens)
+   * 參與者列表
    */
-  participantTokens: string[];
-
-  /**
-   * 實際付款金額列表 (Paid Amounts)
-   */
-  paidAmounts: string[];
-
-  /**
-   * 應付金額列表 (Share Amounts)
-   */
-  shareAmounts: string[];
+  participants: {
+    memberToken: string;
+    paidAmount: string;
+    owedAmount: string;
+  }[];
 
   /**
    * 創建者 Token (Member Token)

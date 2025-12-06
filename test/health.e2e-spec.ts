@@ -20,6 +20,9 @@ describe('HealthController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/health')
       .expect(200)
-      .expect('OK');
+      .expect((res) => {
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toBe('OK');
+      });
   });
 });

@@ -6,7 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { ExpensesModule } from './expenses/expenses.module';
-import { PaymentsModule } from './payments/payments.module';
+import { SettlementsModule } from './settlements/settlements.module';
 import { ExpenseCategoriesModule } from './expense-categories/expense-categories.module';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
@@ -133,7 +133,7 @@ import 'winston-daily-rotate-file';
     ActivitiesModule,
     ExpensesModule,
     ExpenseCategoriesModule,
-    PaymentsModule,
+    SettlementsModule,
     HealthModule,
     AuthModule,
   ],

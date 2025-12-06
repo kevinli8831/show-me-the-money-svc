@@ -34,10 +34,10 @@ describe('UsersController (e2e)', () => {
       .send(createUserDto)
       .expect(201);
 
-    expect(response.body).toHaveProperty('id');
-    expect(response.body.name).toBe(createUserDto.name);
-    expect(response.body.email).toBe(createUserDto.email);
-    createdUserId = response.body.id;
+    expect(response.body.data).toHaveProperty('id');
+    expect(response.body.data.name).toBe(createUserDto.name);
+    expect(response.body.data.email).toBe(createUserDto.email);
+    createdUserId = response.body.data.id;
   });
 
   it('/users (GET) - Get All Users', async () => {
@@ -45,8 +45,8 @@ describe('UsersController (e2e)', () => {
       .get('/users')
       .expect(200);
 
-    expect(Array.isArray(response.body)).toBe(true);
-    expect(response.body.length).toBeGreaterThan(0);
+    expect(Array.isArray(response.body.data)).toBe(true);
+    expect(response.body.data.length).toBeGreaterThan(0);
   });
 
   it('/users/:id (GET) - Get One User', async () => {
@@ -54,7 +54,7 @@ describe('UsersController (e2e)', () => {
       .get(`/users/${createdUserId}`)
       .expect(200);
 
-    expect(response.body.id).toBe(createdUserId);
+    expect(response.body.data.id).toBe(createdUserId);
   });
 
   it('/users/:id (GET) - Get One User (Not Found)', async () => {
@@ -73,7 +73,7 @@ describe('UsersController (e2e)', () => {
       .send(updateUserDto)
       .expect(200);
 
-    expect(response.body.name).toBe(updateUserDto.name);
+    expect(response.body.data.name).toBe(updateUserDto.name);
   });
 
   it('/users/:id (PATCH) - Update User (Not Found)', async () => {

@@ -26,80 +26,80 @@ export class ExpensesService {
   ) { }
 
   /**
-   * 創建新 Expense（連同 payers 同 splits）
+   * 創建新 Expense（連同 expense_participants）
    * 
    * 流程：
-   * 1. Validate payers 同 splits 總和
+   * 1. Validate participants 總和
    * 2. Insert expense
-   * 3. Insert expense payers（如果有提供）
-   * 4. Insert expense splits（如果有提供）
+   * 3. Insert expense_participants
    * 
    * 例子：
    * createExpenseDto = {
    *   activityId: 1,
-   *   title: "晚餐",
-   *   amount: "300.00",
+   *   description: "晚餐",
+   *   totalAmount: "300.00",
    *   currency: "HKD",
-   *   category: "食飯",
-   *   createdBy: 1,
-   *   payers: [
-   *     { userId: 1, amountPaid: "200.00" },
-   *     { userId: 2, amountPaid: "100.00" }
-   *   ],
-   *   splits: [
-   *     { userId: 1, shareAmount: "150.00", splitMethod: "custom" },
-   *     { userId: 2, shareAmount: "150.00", splitMethod: "custom" }
+   *   createdByToken: "mt-12345678",
+   *   participants: [
+   *     { memberToken: "mt-12345678", paidAmount: "200.00", owedAmount: "150.00" },
+   *     { memberToken: "mt-87654321", paidAmount: "100.00", owedAmount: "150.00" }
    *   ]
    * }
    */
   async create(createExpenseDto: CreateExpenseDto) {
     // === Validation ===
-    // 1. Validate array lengths match
-    if (
-      createExpenseDto.participantTokens.length !== createExpenseDto.paidAmounts.length ||
-      createExpenseDto.participantTokens.length !== createExpenseDto.shareAmounts.length
-    ) {
-      throw new Error('Participant tokens, paid amounts, and share amounts must have the same length');
-    }
-
-    // 2. Validate paid amounts total = expense amount
-    const paidTotal = createExpenseDto.paidAmounts.reduce((sum, amount) => sum + parseFloat(amount), 0);
-    const expenseAmount = parseFloat(createExpenseDto.amount);
+    // 1. Validate paid amounts total = totalAmount
+    const paidTotal = createExpenseDto.participants.reduce((sum, p) => sum + parseFloat(p.paidAmount), 0);
+    const expenseAmount = parseFloat(createExpenseDto.totalAmount);
 
     if (Math.abs(paidTotal - expenseAmount) > 0.01) {
-      throw new Error(`Paid amounts total (${paidTotal}) does not match expense amount (${expenseAmount})`);
+      throw new Error(`Paid amounts total (${paidTotal}) does not match expense total amount (${expenseAmount})`);
     }
 
-    // 3. Validate share amounts total = expense amount
-    const shareTotal = createExpenseDto.shareAmounts.reduce((sum, amount) => sum + parseFloat(amount), 0);
+    // 2. Validate owed amounts total = totalAmount
+    const owedTotal = createExpenseDto.participants.reduce((sum, p) => sum + parseFloat(p.owedAmount), 0);
 
-    if (Math.abs(shareTotal - expenseAmount) > 0.01) {
-      throw new Error(`Share amounts total (${shareTotal}) does not match expense amount (${expenseAmount})`);
+    if (Math.abs(owedTotal - expenseAmount) > 0.01) {
+      throw new Error(`Owed amounts total (${owedTotal}) does not match expense total amount (${expenseAmount})`);
     }
 
     // === Insert Data ===
+    // 1. Insert Expense Header
     const [expense] = await this.db
       .insert(schema.expenses)
       .values({
         activityId: createExpenseDto.activityId,
         description: createExpenseDto.description,
-        amount: createExpenseDto.amount,
+        totalAmount: createExpenseDto.totalAmount,
         currency: createExpenseDto.currency,
-        participantTokens: createExpenseDto.participantTokens,
-        paidAmounts: createExpenseDto.paidAmounts,
-        shareAmounts: createExpenseDto.shareAmounts,
         createdByToken: createExpenseDto.createdByToken,
       })
       .returning();
+
+    // 2. Insert Participants
+    if (createExpenseDto.participants.length > 0) {
+      await this.db.insert(schema.expenseParticipants).values(
+        createExpenseDto.participants.map((p) => ({
+          expenseId: expense.id,
+          memberToken: p.memberToken,
+          paidAmount: p.paidAmount,
+          owedAmount: p.owedAmount,
+        }))
+      );
+    }
 
     return expense;
   }
 
   /**
-   * 獲取所有 Expenses
+   * 獲取所有 Expenses (Include Participants)
    */
   async findAll() {
-    return this.db.query.expenses.findMany();
+    return this.db.query.expenses.findMany({
+      with: {
+        participants: true,
+      },
+    });
   }
 
   /**
@@ -108,6 +108,9 @@ export class ExpensesService {
   async findOne(id: number) {
     const expense = await this.db.query.expenses.findFirst({
       where: eq(schema.expenses.id, id),
+      with: {
+        participants: true,
+      },
     });
 
     if (!expense) {
@@ -119,17 +122,57 @@ export class ExpensesService {
 
   /**
    * 更新 Expense
+   * 
+   * Check logic: if participants provided, replace all.
    */
   async update(id: number, memberToken: string, updateExpenseDto: UpdateExpenseDto, userId?: number) {
-    const updateData = updateExpenseDto;
-    const [expense] = await this.db
-      .update(schema.expenses)
-      .set(updateData)
-      .where(eq(schema.expenses.id, id))
-      .returning();
+    // Basic update on expense table
+    const updateData: any = { ...updateExpenseDto };
+    delete updateData.participants; // Handle participants separately
+
+    // Calculate totalAmount if provided (for validation only, assumes update logic is solid or simple replace)
+    // Actually, handling partial update for normalized tables is complex.
+    // For now, let's assume if participants are provided, we replace them all.
+
+    let expense;
+
+    // Update header if there are fields to update
+    if (Object.keys(updateData).length > 0) {
+      // Map totalAmount if it's there (it might be passed as amount in some legacy thought, but DTO should enforce totalAmount)
+      // DTO has totalAmount.
+
+      [expense] = await this.db
+        .update(schema.expenses)
+        .set(updateData)
+        .where(eq(schema.expenses.id, id))
+        .returning();
+    } else {
+      // Fetch if not updated
+      expense = await this.db.query.expenses.findFirst({
+        where: eq(schema.expenses.id, id),
+      });
+    }
 
     if (!expense) {
       throw new NotFoundException(`Expense with ID ${id} not found`);
+    }
+
+    // Update participants if provided
+    if (updateExpenseDto.participants) {
+      // Delete old
+      await this.db.delete(schema.expenseParticipants).where(eq(schema.expenseParticipants.expenseId, id));
+
+      // Insert new
+      if (updateExpenseDto.participants.length > 0) {
+        await this.db.insert(schema.expenseParticipants).values(
+          updateExpenseDto.participants.map((p) => ({
+            expenseId: id,
+            memberToken: p.memberToken,
+            paidAmount: p.paidAmount,
+            owedAmount: p.owedAmount,
+          }))
+        );
+      }
     }
 
     // Log audit
@@ -140,7 +183,7 @@ export class ExpensesService {
       activityId: expense.activityId,
       performedByMemberToken: memberToken,
       performedByUserId: userId,
-      details: updateData,
+      details: updateExpenseDto,
     });
 
     return expense;
@@ -149,7 +192,7 @@ export class ExpensesService {
   /**
    * 刪除 Expense
    * 
-   * 注意：會同時刪除所有相關嘅 expense_payers 同 expense_splits (cascade delete)
+   * 注意：會同時刪除所有相關嘅 expense_participants (cascade delete)
    */
   async remove(id: number, memberToken: string, userId?: number) {
     const [expense] = await this.db

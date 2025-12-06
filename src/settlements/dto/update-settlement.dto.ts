@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreatePaymentDto } from './create-payment.dto';
+import { CreateSettlementDto } from './create-settlement.dto';
 
 /**
  * UpdatePaymentDto - 更新 Payment 嘅 Data Transfer Object
@@ -12,4 +12,4 @@ import { CreatePaymentDto } from './create-payment.dto';
  * PATCH /payments/1
  * Body: { "amount": "60.00" }  // 只更新 amount
  */
-export class UpdatePaymentDto extends PartialType(CreatePaymentDto) {}
+export class UpdateSettlementDto extends PartialType(CreateSettlementDto) { }

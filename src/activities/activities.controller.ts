@@ -50,7 +50,7 @@ export class ActivitiesController {
   async create(@Body() createActivityDto: CreateActivityDto, @Req() req: Request & { user?: any }) {
     // If user is logged in (via JWT), use their ID
     console.log(req.user)
-    const activity = await this.activitiesService.create(createActivityDto);
+    const activity = await this.activitiesService.create(createActivityDto, req.user);
     return formatSuccessResponse(activity, '成功創建 Activity');
   }
 
